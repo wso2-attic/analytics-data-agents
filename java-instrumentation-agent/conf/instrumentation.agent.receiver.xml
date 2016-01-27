@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eventReceiver name="instrumentation.agent.receiver"
+    statistics="disable" trace="disable" xmlns="http://wso2.org/carbon/eventreceiver">
+    <from eventAdapterType="wso2event">
+        <property name="events.duplicated.in.cluster">false</property>
+    </from>
+    <mapping arbitraryMaps="enable" customMapping="disable" type="wso2event"/>
+    <to streamName="instrumentation.agent.stream" version="1.0.0"/>
+</eventReceiver>

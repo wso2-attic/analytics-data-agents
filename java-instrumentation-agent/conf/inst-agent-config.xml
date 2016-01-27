@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<instrumentationAgent >
+    <agentConnection>
+		<streamName>instrumentation.agent.stream</streamName>
+		<tableName>INSTRUMENTATION_AGENT_STREAM</tableName>
+		<version>1.0.0</version>
+		<receiverURL>tcp://localhost:7613</receiverURL>
+		<authURL>ssl://localhost:7613</authURL>
+		<username>admin</username>
+		<password>admin</password>
+		<hostName>localhost</hostName>
+		<servicePort>9445</servicePort>
+    </agentConnection>
+
+<!--Need to add unique names for parameterName's key attribute, -->
+    <!--because that would be used as the column name of persisting table-->
+
+    <scenarios>
+		<scenario name="h2-monitoring">
+			<instrumentingClass name="org.h2.jdbc.JdbcPreparedStatement">
+				<instrumentingMethod name="executeQuery" signature="()Ljava/sql/ResultSet;">
+					<insertAts>
+						<insertAt lineNo="3">
+							<parameterName key="query">$0.sqlStatement</parameterName>
+						</insertAt>
+					</insertAts>
+				</instrumentingMethod>
+			</instrumentingClass>
+			<instrumentingClass name="org.h2.jdbc.JdbcConnection">
+				<instrumentingMethod name="prepareStatement" 
+				signature="(Ljava/lang/String;)Ljava/sql/PreparedStatement;">
+					<insertAts>
+						<insertAt lineNo="3">
+							<parameterName key="query">$1</parameterName>
+							<parameterName key="url">$0.url</parameterName>
+						</insertAt>
+					</insertAts>
+				</instrumentingMethod>
+			</instrumentingClass>
+		</scenario>
+	</scenarios>
+</instrumentationAgent>

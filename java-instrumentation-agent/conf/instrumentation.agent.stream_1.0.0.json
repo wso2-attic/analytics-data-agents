@@ -1,0 +1,34 @@
+{
+  "name": "instrumentation.agent.stream",
+  "version": "1.0.0",
+  "nickName": "",
+  "description": "",
+  "correlationData": [
+    {
+      "name": "method_Id",
+      "type": "LONG"
+    }
+  ],
+  "payloadData": [
+    {
+      "name": "scenario_name",
+      "type": "STRING"
+    },
+    {
+      "name": "class_name",
+      "type": "STRING"
+    },
+    {
+      "name": "method_name",
+      "type": "STRING"
+    },
+    {
+      "name": "inst_location",
+      "type": "STRING"
+    },
+    {
+      "name": "duration",
+      "type": "STRING"
+    }
+  ]
+}
