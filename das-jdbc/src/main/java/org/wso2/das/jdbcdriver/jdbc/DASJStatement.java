@@ -1,31 +1,37 @@
 /*
-*  Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
-*
-*  WSO2 Inc. licenses this file to you under the Apache License,
-*  Version 2.0 (the "License"); you may not use this file except
-*  in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*    http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.wso2.das.jdbcdriver.jdbc;
 
 import org.wso2.das.jdbcdriver.dasInterface.DataReader;
 import org.wso2.das.jdbcdriver.common.JSONUtil;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.SQLWarning;
+import java.sql.Statement;
 import java.util.HashMap;
+
 import org.wso2.das.jdbcdriver.common.SQLParser;
 
 /**
  * This class implements the java.sql.Statement JDBC interface for the DASJDriver driver.
+ * This is used for executing a SQL statement and returning the results it produces.
  */
 public class DASJStatement implements Statement {
 
@@ -38,63 +44,52 @@ public class DASJStatement implements Statement {
     private int fetchSize = 1;
     private int fetchDirection = ResultSet.FETCH_FORWARD;
 
-    protected DASJStatement(DASJConnection connection, int resultSetType)
-    {
+    protected DASJStatement(DASJConnection connection, int resultSetType) {
         this.connection = connection;
         this.resultSetType = resultSetType;
     }
 
-    protected void checkStatus() throws SQLException
-    {
-        if (connectionClosed)
+    protected void checkStatus() throws SQLException {
+        if (connectionClosed) {
             throw new SQLException("[Closed Statement]: Driver.getParentLogger()");
+        }
     }
 
+    /**
+     * Executes the given SQL statement, which returns a single ResultSet object.
+     * @param sql SQL Statement for execution
+     * @return  Resultset object which contains the result for the query
+     * @throws SQLException
+     */
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
         checkStatus();
-
-        if (prevResultSet != null)
+        if (prevResultSet != null) {
             prevResultSet.close();
+        }
         prevResultSet = null;
 
         //Parse the SQL
         SQLParser sqlParser = new SQLParser();
         try {
             sqlParser.parse(sql);
-        }
-        catch (Exception e){
-            throw new SQLException("SyntaxError:executeQuery"+sql+"|"+e.getMessage());
+        } catch (Exception e) {
+            throw new SQLException("SyntaxError:executeQuery" + sql + "|" + e.getMessage());
         }
 
         ResultSet rs = executeDASQuery(sqlParser);
         prevResultSet = rs;
-
         return rs;
     }
 
     @Override
-    public int executeUpdate(String sql) throws SQLException {
-        return 0;
-    }
-
-    @Override
     public void close() throws SQLException {
-        if(prevResultSet != null)
+        if (prevResultSet != null) {
             prevResultSet.close();
+        }
         prevResultSet = null;
         connectionClosed = true;
         connection.removeStatement(this);
-    }
-
-    @Override
-    public int getMaxFieldSize() throws SQLException {
-        return 0;
-    }
-
-    @Override
-    public void setMaxFieldSize(int max) throws SQLException {
-        throw new SQLException("UnsupportedOperation:Statement.setMaxFieldSize(int)");
     }
 
     @Override
@@ -110,11 +105,6 @@ public class DASJStatement implements Statement {
     }
 
     @Override
-    public void setEscapeProcessing(boolean enable) throws SQLException {
-        throw new SQLException("UnsupportedOperation:Statement.setEscapeProcessing(boolean)");
-    }
-
-    @Override
     public int getQueryTimeout() throws SQLException {
         checkStatus();
         return queryTimeout;
@@ -127,79 +117,31 @@ public class DASJStatement implements Statement {
     }
 
     @Override
-    public void cancel() throws SQLException {
-
-    }
-
-    @Override
-    public SQLWarning getWarnings() throws SQLException {
-        return null;
-    }
-
-    @Override
-    public void clearWarnings() throws SQLException {
-
-    }
-
-    @Override
-    public void setCursorName(String name) throws SQLException {
-        throw new SQLException("UnsupportedOperation:Statement.setCursorName(String)");
-    }
-
-    @Override
-    public boolean execute(String sql) throws SQLException {
-
-        checkStatus();
-
-        if (prevResultSet != null)
-            prevResultSet.close();
-        prevResultSet = null;
-
-        //Parse the SQL
-        SQLParser sqlParser = new SQLParser();
-        try {
-            sqlParser.parse(sql);
-            ResultSet rs = executeDASQuery(sqlParser);
-            prevResultSet = rs;
-        }
-        catch (Exception e ){
-            throw new SQLException("SQLExecution Error:executeQuery"+sql+"|"+e.getMessage());
-        }
-
-
-        return true;
-    }
-
-    @Override
     public ResultSet getResultSet() throws SQLException {
         return prevResultSet;
     }
 
     @Override
-    public int getUpdateCount() throws SQLException {
-        return 0;
-    }
-
-    @Override
-    public boolean getMoreResults() throws SQLException {
-        return false;
-    }
-
-    @Override
     public void setFetchDirection(int direction) throws SQLException {
         checkStatus();
-
         if (direction == ResultSet.FETCH_FORWARD ||
                 direction == ResultSet.FETCH_REVERSE ||
-                direction == ResultSet.FETCH_UNKNOWN)
-        {
+                direction == ResultSet.FETCH_UNKNOWN) {
             this.fetchDirection = direction;
-        }
-        else
-        {
+        } else {
             throw new SQLException("Statement-setFetchDirection:unsupportedDirection:" + direction);
         }
+    }
 
+    @Override
+    public Connection getConnection() throws SQLException {
+        checkStatus();
+        return connection;
+    }
+
+    @Override
+    public boolean isClosed() throws SQLException {
+        return connectionClosed;
     }
 
     @Override
@@ -222,7 +164,7 @@ public class DASJStatement implements Statement {
 
     @Override
     public int getResultSetConcurrency() throws SQLException {
-       checkStatus();
+        checkStatus();
         return ResultSet.CONCUR_READ_ONLY;
     }
 
@@ -230,6 +172,82 @@ public class DASJStatement implements Statement {
     public int getResultSetType() throws SQLException {
         checkStatus();
         return this.resultSetType;
+    }
+
+    @Override
+    public int getMaxFieldSize() throws SQLException {
+        return 0;
+    }
+
+    @Override
+    public int executeUpdate(String sql) throws SQLException {
+        return 0;
+    }
+
+    @Override
+    public int getUpdateCount() throws SQLException {
+        return 0;
+    }
+
+    @Override
+    public boolean getMoreResults() throws SQLException {
+        return false;
+    }
+
+    /**
+     * Executes the given SQL statement, which may return multiple results.
+     * @param sql SQL Statement for execution
+     * @return true if the first result is a ResultSet object
+     * @throws SQLException
+     */
+    @Override
+    public boolean execute(String sql) throws SQLException {
+        checkStatus();
+        if (prevResultSet != null) {
+            prevResultSet.close();
+        }
+        prevResultSet = null;
+
+        //Parse the SQL
+        ResultSet rs;
+        SQLParser sqlParser = new SQLParser();
+        try {
+            sqlParser.parse(sql);
+            rs = executeDASQuery(sqlParser);
+            prevResultSet = rs;
+        } catch (Exception e) {
+            throw new SQLException("SQLExecution Error:executeQuery" + sql + "|" + e.getMessage());
+        }
+        return (rs != null);
+    }
+
+
+    @Override
+    public void setMaxFieldSize(int max) throws SQLException {
+        throw new SQLException("UnsupportedOperation:Statement.setMaxFieldSize(int)");
+    }
+
+    @Override
+    public void setEscapeProcessing(boolean enable) throws SQLException {
+        throw new SQLException("UnsupportedOperation:Statement.setEscapeProcessing(boolean)");
+    }
+
+    @Override
+    public void cancel() throws SQLException {
+    }
+
+    @Override
+    public SQLWarning getWarnings() throws SQLException {
+        return null;
+    }
+
+    @Override
+    public void clearWarnings() throws SQLException {
+    }
+
+    @Override
+    public void setCursorName(String name) throws SQLException {
+        throw new SQLException("UnsupportedOperation:Statement.setCursorName(String)");
     }
 
     @Override
@@ -245,12 +263,6 @@ public class DASJStatement implements Statement {
     @Override
     public int[] executeBatch() throws SQLException {
         throw new SQLException("MethodNotSupported: Statement.executeBatch(String)");
-    }
-
-    @Override
-    public Connection getConnection() throws SQLException {
-        checkStatus();
-        return connection;
     }
 
     @Override
@@ -299,13 +311,7 @@ public class DASJStatement implements Statement {
     }
 
     @Override
-    public boolean isClosed() throws SQLException {
-        return connectionClosed;
-    }
-
-    @Override
     public void setPoolable(boolean poolable) throws SQLException {
-
     }
 
     @Override
@@ -315,7 +321,6 @@ public class DASJStatement implements Statement {
 
     @Override
     public void closeOnCompletion() throws SQLException {
-
     }
 
     @Override
@@ -336,31 +341,22 @@ public class DASJStatement implements Statement {
     /**
      * Send the query to the DAS Backend and generate the result set
      */
-    protected ResultSet executeDASQuery(SQLParser sqlParser) throws SQLException{
-
-        HashMap<String,String> mapColumnDataTypes = this.connection.getColumnDataTypes(sqlParser.getTableName());
+    protected ResultSet executeDASQuery(SQLParser sqlParser) throws SQLException {
+        HashMap<String, String> mapColumnDataTypes = this.connection.getColumnDataTypes(sqlParser.getTableName());
         String sDataResponse = this.connection.getTableData(sqlParser.getTableName());
         DataReader dataReader = JSONUtil.parseDataArray(sDataResponse, mapColumnDataTypes);
-        ResultSet retRs = createResultSet(dataReader,sqlParser);
-        return retRs;
-
+        return createResultSet(dataReader, sqlParser);
     }
 
     /**
-     * Create the result set by using the retrived data from the DAS backend
+     * Create the result set by using the retrieved data from the DAS backend
      */
-
-    private ResultSet createResultSet(DataReader reader,SQLParser sqlParser) throws SQLException
-    {
-        ResultSet rs = null;
-
-        try
-        {
-            rs = new DASJResultSet(this,reader,"",sqlParser.getQueryEnvironment(),false, ResultSet.TYPE_FORWARD_ONLY,-1,sqlParser.getWhereExpression());
-
-        }
-        catch (ClassNotFoundException e)
-        {
+    private ResultSet createResultSet(DataReader reader, SQLParser sqlParser) throws SQLException {
+        ResultSet rs;
+        try {
+            rs = new DASJResultSet(this, reader,sqlParser.getTableName(), sqlParser.getQueryEnvironment(), ResultSet.TYPE_FORWARD_ONLY,
+                    -1, sqlParser.getWhereExpression());
+        } catch (ClassNotFoundException e) {
             throw new SQLException(e.getMessage());
         }
         return rs;

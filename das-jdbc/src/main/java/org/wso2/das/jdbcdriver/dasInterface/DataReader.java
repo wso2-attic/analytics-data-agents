@@ -1,20 +1,19 @@
 /*
- *  Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
- *  WSO2 Inc. licenses this file to you under the Apache License,
- *  Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License.
- *  You may obtain a copy of the License at
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package org.wso2.das.jdbcdriver.dasInterface;
 
@@ -30,21 +29,16 @@ import java.util.Map;
  * Helper class which supports the data reading operations
  */
 public class DataReader {
-
-    public static final int DEFAULT_COLUMN_SIZE = 20;
-
-    private String []columnNames;
-    private String []columnTypes;
-    private List<Object []> columnValues;
+    private String[] columnNames;
+    private String[] columnTypes;
+    private List<Object[]> columnValues;
     private int rowIndex;
 
-    public DataReader()
-    {
+    public DataReader() {
         rowIndex = -1;
     }
 
-    public DataReader(String []columnNames, String []columnTypes, List<Object []> columnValues)
-    {
+    public DataReader(String[] columnNames, String[] columnTypes, List<Object[]> columnValues) {
         this.columnNames = columnNames;
         this.columnTypes = columnTypes;
         this.columnValues = columnValues;
@@ -63,52 +57,42 @@ public class DataReader {
         this.columnValues = columnValues;
     }
 
-    public boolean next() throws SQLException
-    {
+    public boolean next() throws SQLException {
         rowIndex++;
-        boolean retval = (rowIndex < columnValues.size());
-        return retval;
+        return (rowIndex < columnValues.size());
     }
 
-    public String[] getColumnNames() throws SQLException
-    {
+    public String[] getColumnNames() throws SQLException {
         return columnNames;
     }
 
-    public void close() throws SQLException
-    {
+    public void close() throws SQLException {
     }
 
     /**
      * Get the data of the current record
-     * @return
      * @throws SQLException
      */
-    public Map<String, Object> getEnvironment() throws SQLException
-    {
+    public Map<String, Object> getEnvironment() throws SQLException {
         HashMap<String, Object> retval = new HashMap<String, Object>();
-        Object []o = columnValues.get(rowIndex);
-        for (int i = 0; i < columnNames.length; i++)
-        {
+        Object[] o = columnValues.get(rowIndex);
+        for (int i = 0; i < columnNames.length; i++) {
             retval.put(columnNames[i], o[i]);
         }
         return retval;
     }
 
-    public String[] getColumnTypes() throws SQLException
-    {
+    public String[] getColumnTypes() throws SQLException {
         return columnTypes;
     }
 
-    public int[] getColumnSizes() throws SQLException
-    {
-        int []columnSizes = new int[columnTypes.length];
+    public int[] getColumnSizes() throws SQLException {
+        int[] columnSizes = new int[columnTypes.length];
         Arrays.fill(columnSizes, ServiceConstants.DAS_DRIVER_SETTINGS.DEFAULT_COLUMN_SIZE);
         return columnSizes;
     }
 
-    public String getTableAlias()
-    {
+    public String getTableAlias() {
         return null;
     }
 }

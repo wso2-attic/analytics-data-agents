@@ -1,22 +1,20 @@
 /*
- *  Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
- *  WSO2 Inc. licenses this file to you under the Apache License,
- *  Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License.
- *  You may obtain a copy of the License at
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
-
 package org.wso2.das.jdbcdriver.dasInterface;
 
 import java.io.BufferedReader;
@@ -31,14 +29,13 @@ public class DASServiceConnector {
 
     /**
      * Sends HTTP GET request to DAS Backend rest API
-     * @param url Connectio URL of the DAS API
-     * @param user User name of the
-     * @param pass
-     * @return
+     * @param url  Connectio URL of the DAS API
+     * @param user User name for the DAS Service
+     * @param pass Password for the DAS service
      * @throws Exception
      */
     public static String sendGet(String url, String user, String pass) throws Exception {
-        System.out.println("REQUEST:"+url);
+        System.out.println("REQUEST:" + url);
         URL obj = new URL(url);
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
 
@@ -51,18 +48,16 @@ public class DASServiceConnector {
         con.setRequestProperty("Authorization", "Basic " + encoding);
 
         int responseCode = con.getResponseCode();
-        System.out.println("DAS Response Code:"+responseCode);
+        System.out.println("DAS Service Response Code:" + responseCode);
 
         BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
         String inputLine;
-        StringBuffer response = new StringBuffer();
+        StringBuilder response = new StringBuilder();
 
         while ((inputLine = in.readLine()) != null) {
             response.append(inputLine);
         }
         in.close();
-
-        return(response.toString());
-
+        return (response.toString());
     }
 }

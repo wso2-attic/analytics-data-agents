@@ -1,20 +1,19 @@
 /*
- *  Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
- *  WSO2 Inc. licenses this file to you under the Apache License,
- *  Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License.
- *  You may obtain a copy of the License at
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 package org.wso2.das.jdbcdriver.jdbc;
 
@@ -24,56 +23,65 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
 import java.net.URL;
-import java.sql.*;
+
+import java.sql.Array;
+import java.sql.Blob;
+import java.sql.Clob;
+import java.sql.Date;
+import java.sql.NClob;
+import java.sql.ParameterMetaData;
+import java.sql.PreparedStatement;
+import java.sql.Ref;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.RowId;
+import java.sql.SQLException;
+import java.sql.SQLXML;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.Calendar;
 
 /**
- * The class that represents the precompiled SQL statement.
+ * The class that represents the Pre-compiled SQL statement.
  */
 public class DASJPreparedStatement extends DASJStatement implements PreparedStatement {
-
-    private SQLParser parser;
     private Object[] queryParameters;
-    private String  sqlQuery;
+    private String sqlQuery;
 
-    public DASJPreparedStatement(DASJConnection connection, String sql,int resultSetType) throws SQLException
-    {
+    public DASJPreparedStatement(DASJConnection connection, String sql, int resultSetType) throws SQLException {
         super(connection, resultSetType);
-
-        int iPlaceHolderCount  = sql.length() - sql.replace("?","").length();
-        queryParameters = new Object[iPlaceHolderCount+1];
+        int iPlaceHolderCount = sql.length() - sql.replace("?", "").length();
+        queryParameters = new Object[iPlaceHolderCount + 1];
         sqlQuery = sql;
     }
 
     @Override
     public ResultSet executeQuery() throws SQLException {
-        System.out.println("QUERY:"+sqlQuery);
+        System.out.println("QUERY:" + sqlQuery);
 
         checkStatus();
-        if (prevResultSet != null)
+        if (prevResultSet != null) {
             prevResultSet.close();
+        }
         prevResultSet = null;
 
-        for( int i = 1; i < queryParameters.length; i++)
-        {
+        for (int i = 1; i < queryParameters.length; i++) {
             Object parameter = queryParameters[i];
-            if(parameter instanceof  String)
-                sqlQuery= sqlQuery.replaceFirst("\\?","\'"+parameter+"\'");
-            else
-                sqlQuery= sqlQuery.replaceFirst("\\?",parameter.toString());
+            if (parameter instanceof String) {
+                sqlQuery = sqlQuery.replaceFirst("\\?", "\'" + parameter + "\'");
+            } else {
+                sqlQuery = sqlQuery.replaceFirst("\\?", parameter.toString());
+            }
         }
 
-        parser = new SQLParser();
-        try
-        {
+        SQLParser parser = new SQLParser();
+        try {
             parser.parse(sqlQuery);
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             throw new SQLException("Syntax Error: " + e.getMessage());
         }
 
-        ResultSet rs = executeDASQuery(parser);  //TODO::Fill the ? characters
+        ResultSet rs = executeDASQuery(parser);
         prevResultSet = rs;
         return rs;
     }
@@ -92,49 +100,49 @@ public class DASJPreparedStatement extends DASJStatement implements PreparedStat
     public void setBoolean(int parameterIndex, boolean x) throws SQLException {
         checkStatus();
         checkParameterIndex(parameterIndex);
-        this.queryParameters[parameterIndex] = Boolean.valueOf(x);
+        this.queryParameters[parameterIndex] = x;
     }
 
     @Override
     public void setByte(int parameterIndex, byte x) throws SQLException {
         checkStatus();
         checkParameterIndex(parameterIndex);
-        this.queryParameters[parameterIndex] = Byte.valueOf(x);
+        this.queryParameters[parameterIndex] = x;
     }
 
     @Override
     public void setShort(int parameterIndex, short x) throws SQLException {
         checkStatus();
         checkParameterIndex(parameterIndex);
-        this.queryParameters[parameterIndex] = Short.valueOf(x);
+        this.queryParameters[parameterIndex] = x;
     }
 
     @Override
     public void setInt(int parameterIndex, int x) throws SQLException {
         checkStatus();
         checkParameterIndex(parameterIndex);
-        this.queryParameters[parameterIndex] = Integer.valueOf(x);
+        this.queryParameters[parameterIndex] = x;
     }
 
     @Override
     public void setLong(int parameterIndex, long x) throws SQLException {
         checkStatus();
         checkParameterIndex(parameterIndex);
-        this.queryParameters[parameterIndex] = Long.valueOf(x);
+        this.queryParameters[parameterIndex] = x;
     }
 
     @Override
     public void setFloat(int parameterIndex, float x) throws SQLException {
         checkStatus();
         checkParameterIndex(parameterIndex);
-        this.queryParameters[parameterIndex] = Float.valueOf(x);
+        this.queryParameters[parameterIndex] = x;
     }
 
     @Override
     public void setDouble(int parameterIndex, double x) throws SQLException {
         checkStatus();
         checkParameterIndex(parameterIndex);
-        this.queryParameters[parameterIndex] = Double.valueOf(x);
+        this.queryParameters[parameterIndex] = x;
     }
 
     @Override
@@ -198,8 +206,7 @@ public class DASJPreparedStatement extends DASJStatement implements PreparedStat
 
     @Override
     public void clearParameters() throws SQLException {
-        for (int i = 1; i < queryParameters.length; i++)
-        {
+        for (int i = 1; i < queryParameters.length; i++) {
             queryParameters[i] = null;
         }
     }
@@ -352,7 +359,8 @@ public class DASJPreparedStatement extends DASJStatement implements PreparedStat
     }
 
     @Override
-    public void setObject(int parameterIndex, Object x, int targetSqlType, int scaleOrLength) throws SQLException {
+    public void setObject(int parameterIndex, Object x, int targetSqlType, int scaleOrLength)
+            throws SQLException {
 
     }
 
@@ -427,9 +435,9 @@ public class DASJPreparedStatement extends DASJStatement implements PreparedStat
         this.queryParameters[parameterIndex] = reader;
     }
 
-    private void checkParameterIndex(int parameterIndex) throws SQLException
-    {
-        if (parameterIndex < 1 || parameterIndex > queryParameters.length)
+    private void checkParameterIndex(int parameterIndex) throws SQLException {
+        if (parameterIndex < 1 || parameterIndex > queryParameters.length) {
             throw new SQLException("Invalid ParameterIndex " + parameterIndex);
+        }
     }
 }

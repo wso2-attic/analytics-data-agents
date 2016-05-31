@@ -1,22 +1,23 @@
 /*
-*  Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
-*
-*  WSO2 Inc. licenses this file to you under the Apache License,
-*  Version 2.0 (the "License"); you may not use this file except
-*  in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*    http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied.  See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.wso2.das.jdbcdriver.jdbc;
 
+import org.wso2.das.jdbcdriver.common.ServiceConstants;
 import org.wso2.das.jdbcdriver.dasInterface.DataReader;
 import org.wso2.das.jdbcdriver.expressions.*;
 import org.wso2.das.jdbcdriver.aggregateFunctions.AggregateFunction;
@@ -33,6 +34,7 @@ import java.util.*;
 
 /**
  * This class implements the java.sql.ResultSet JDBC interface for the DASJDriver driver.
+ * This represents result set from DAS service.
  */
 
 public class DASJResultSet implements ResultSet {
@@ -43,7 +45,7 @@ public class DASJResultSet implements ResultSet {
 
     private String tableName;
 
-    private List<Object []> queryEnvironment;
+    private List<Object[]> queryEnvironment;
 
     private Map<String, Object> recordEnvironment;
 
@@ -75,189 +77,170 @@ public class DASJResultSet implements ResultSet {
 
     private List<AggregateFunction> aggregateFunctions;
 
-    private List<Expression> groupByColumns;
-
     private ArrayList<Map<String, Object>> bufferedRecordEnvironments = null;
 
 
     /**
-     * Constructor for the CsvResultSet object
-     *
+     * Constructor for the DAS Result Set object
      * @param statement Statement that produced this ResultSet
      * @param reader Helper class that performs the actual file reads
      * @param tableName Table referenced by the Statement
      * @param queryEnvironment each query expression in the Statement.
-     * @param isDistinct true if Statement contains DISTINCT keyword.
      * @throws ClassNotFoundException in case the typed columns fail.
      * @throws SQLException if executing the SQL statement fails.
      */
-    protected DASJResultSet(DASJStatement statement,
-                           DataReader reader,
-                           String tableName,
-                           List<Object []> queryEnvironment,
-                           boolean isDistinct,
-                           int resultSetType,
-                           int sqlLimit,
-                           Expression whereClause) throws ClassNotFoundException, SQLException {
+    protected DASJResultSet(DASJStatement statement, DataReader reader, String tableName,
+            List<Object[]> queryEnvironment, int resultSetType, int sqlLimit, Expression whereClause)
+            throws ClassNotFoundException, SQLException {
         this.statement = statement;
         this.reader = reader;
         this.tableName = tableName;
         this.queryEnvironment = new ArrayList<Object[]>(queryEnvironment);
-        this.aggregateFunctions = new ArrayList<AggregateFunction>();
         this.limit = sqlLimit;
         this.resultSetType = resultSetType;
         this.whereClause = whereClause;
 
+        this.aggregateFunctions = new ArrayList<AggregateFunction>();
+        this.maxRows = statement.getMaxRows();
+        this.fetchSize = statement.getFetchSize();
+        this.fetchDirection = statement.getFetchDirection();
+
         String[] columnNames = reader.getColumnNames();
         HashSet<String> allColumns = new HashSet<String>(Arrays.asList(columnNames));
-        maxRows = statement.getMaxRows();
-        fetchSize = statement.getFetchSize();
-        fetchDirection = statement.getFetchDirection();
 
-        if (whereClause!= null)
+        if (whereClause != null) {
             this.filterColumns = new LinkedList<String>(whereClause.getFilteredColumns(allColumns));
-        else
+        } else {
             this.filterColumns = new LinkedList<String>();
+        }
 
         //Replace any "select *" with the list of column names in that table.
-        for (int i = 0; i < this.queryEnvironment.size(); i++)
-        {
+        for (int i = 0; i < this.queryEnvironment.size(); i++) {
             Object[] o = this.queryEnvironment.get(i);
-            Expression expr = (Expression)o[1];
-            if (expr instanceof AsteriskExpression)
-            {
-                AsteriskExpression asteriskExpression = (AsteriskExpression)o[1];
+            Expression expr = (Expression) o[1];
+            if (expr instanceof AsteriskExpression) {
+                AsteriskExpression asteriskExpression = (AsteriskExpression) o[1];
 
-				String asterisk = asteriskExpression.toString();
-                if (!(asterisk.equals("*")))
-                    throw new SQLException("[Invalid Column Name]: "+asterisk);
-                this.queryEnvironment.remove(i);
-                for (int j = 0; j < columnNames.length; j++)
-                {
-                    this.queryEnvironment.add(i + j, new Object[]{columnNames[j], new ColumnName(columnNames[j])});
+                String asterisk = asteriskExpression.toString();
+                if (!(asterisk.equals("*"))) {
+                    throw new SQLException("[Invalid Column Name]: " + asterisk);
                 }
-            }
-            else{
-                if(expr instanceof AggregateFunction){
-                    this.aggregateFunctions.add((AggregateFunction)expr);
+                this.queryEnvironment.remove(i);
+                for (int j = 0; j < columnNames.length; j++) {
+                    this.queryEnvironment.add(i + j, new Object[] { columnNames[j], new ColumnName(columnNames[j]) });
+                }
+            } else {
+                if (expr instanceof AggregateFunction) {
+                    this.aggregateFunctions.add((AggregateFunction) expr);
                 }
             }
         }
 
         //Validate query - Check whether there is column names with the aggregate functions
-        if (aggregateFunctions.size() > 0 && this.groupByColumns == null)
-        {
-			List<String> allColumnnsinQuery = new LinkedList<String>();
-            for (int i = 0; i < this.queryEnvironment.size(); i++)
-            {
-                Object[] o = this.queryEnvironment.get(i);
-                if (o[1] != null)
-                {
-                    allColumnnsinQuery.addAll(((Expression)o[1]).getFilteredColumns(allColumns));
+        if (aggregateFunctions.size() > 0) {
+            List<String> allColumnnsinQuery = new LinkedList<String>();
+            for(Object[] o : this.queryEnvironment) {
+                if (o[1] != null) {
+                    allColumnnsinQuery.addAll(((Expression) o[1]).getFilteredColumns(allColumns));
                 }
             }
-            if (allColumnnsinQuery.size() > 0 && aggregateFunctions.size() > 0)
+            if (allColumnnsinQuery.size() > 0 && aggregateFunctions.size() > 0) {
                 throw new SQLException("INVALID QUERY: Columns with Aggregate functions");
+            }
         }
 
-        if (this.aggregateFunctions.size() > 0){
-
+        //Calculate the Aggregate functions on the data set
+        if (this.aggregateFunctions.size() > 0) {
             bufferedRecordEnvironments = new ArrayList<Map<String, Object>>();
             currentRow = 0;
 
-            while (next())
-            {
-                for (Object o : this.aggregateFunctions)
-                {
-                    AggregateFunction func = (AggregateFunction)o;
+            while (next()) {
+                for (Object o : this.aggregateFunctions) {
+                    AggregateFunction func = (AggregateFunction) o;
                     func.processRow(recordEnvironment);
                 }
             }
-
-
             bufferedRecordEnvironments.add(new HashMap<String, Object>());
             currentRow = 0;
         }
     }
-        @Override
+
+    /*
+     *Moves the cursor froward one row from its current position.
+     */
+    @Override
     public boolean next() throws SQLException {
-            boolean hasNext;
-
-            if(this.aggregateFunctions.size() > 0  && currentRow < bufferedRecordEnvironments.size()){
-                currentRow++;
-                recordEnvironment = bufferedRecordEnvironments.get(currentRow - 1);
-                updateRecordEnvironment(true);
-                hasNext = true;
+        boolean hasNext;
+        if (this.aggregateFunctions.size() > 0 && currentRow < bufferedRecordEnvironments.size()) {
+            currentRow++;
+            recordEnvironment = bufferedRecordEnvironments.get(currentRow - 1);
+            updateRecordEnvironment(true);
+            hasNext = true;
+        } else {
+            if (maxRows != 0 && currentRow >= maxRows) { //Reached the max row count
+                hasNext = false;
+            } else if (limit >= 0 && currentRow >= limit) { //Reached the row limit
+                hasNext = false;
+            } else if (hitTail) {
+                hasNext = false;
+            } else {
+                hasNext = reader.next();
             }
-            else
-            {
-                if (maxRows != 0 && currentRow >= maxRows) {//reached the row limit.
-                    hasNext = false;
-                } else if (limit >= 0 && currentRow >= limit) {
-                    hasNext = false;
-                } else if (hitTail) {
-                    hasNext = false;
-                } else {
-                    hasNext = reader.next();
-                }
 
-                if (hasNext) {
-                    recordEnvironment = reader.getEnvironment();
-                } else {
-                    recordEnvironment = null;
-                }
+            if (hasNext) {
+                recordEnvironment = reader.getEnvironment();
+            } else {
+                recordEnvironment = null;
+            }
 
-
-                //Give priority to where clause
-                if (whereClause != null) {
-                    Map<String, Object> objectEnvironment = updateRecordEnvironment(hasNext);
-                    while (hasNext) {
-                        if (whereClause == null || Boolean.TRUE.equals(whereClause.isTrue(objectEnvironment))) {
-                            break;
-                        }
-                        hasNext = reader.next();
-                        if (hasNext) {
-                            recordEnvironment = reader.getEnvironment();
-                        } else {
-                            recordEnvironment = null;
-                        }
-                        objectEnvironment = updateRecordEnvironment(hasNext);
+            //Give priority to where clause if exists. ObjectEnvironment contains the values of the current record for
+            //the effective columns (Columns in the select part + where clause)
+            if (whereClause != null) {
+                Map<String, Object> objectEnvironment = updateRecordEnvironment(hasNext);
+                while (hasNext) {
+                    if (Boolean.TRUE.equals(whereClause.isTrue(objectEnvironment))) {
+                        break;
                     }
+                    hasNext = reader.next();
+                    if (hasNext) {
+                        recordEnvironment = reader.getEnvironment();
+                    } else {
+                        recordEnvironment = null;
+                    }
+                    objectEnvironment = updateRecordEnvironment(hasNext);
                 }
-
-                if (hasNext)
-                    currentRow++;
-                else
-                    hitTail = true;
             }
-
-
-            nextResult = hasNext;
-            return hasNext;
+            if (hasNext) {
+                currentRow++;
+            } else {
+                hitTail = true;
+            }
+        }
+        nextResult = hasNext;
+        return hasNext;
     }
 
-    private Map<String, Object> updateRecordEnvironment(boolean hasNext) throws SQLException
-    {
+    /*
+     * Construct a temporary record which contains data for the effective columns based on the data in current record.
+     */
+    private Map<String, Object> updateRecordEnvironment(boolean hasNext) throws SQLException {
         Map<String, Object> objectEnvironment = new HashMap<String, Object>();
-        if(!hasNext)
-        {
+        if (!hasNext) {
             recordEnvironment = null;
             return objectEnvironment;
         }
 
-		for (int i = 0; i < queryEnvironment.size(); i++)
-        {
-            Object[] o = queryEnvironment.get(i);
+        for(Object[] o : queryEnvironment) {
             String key = (String) o[0];
             Object value = ((Expression) o[1]).eval(recordEnvironment);
             objectEnvironment.put(key.toUpperCase(), value);
         }
-        for (int i=0; i<filterColumns.size(); i++)
-        {
-            String key = filterColumns.get(i);
+
+        for(String key : filterColumns) {
             key = key.toUpperCase();
-            if (recordEnvironment.containsKey(key))
+            if (recordEnvironment.containsKey(key)) {
                 objectEnvironment.put(key, recordEnvironment.get(key));
+            }
         }
 
         return objectEnvironment;
@@ -273,12 +256,9 @@ public class DASJResultSet implements ResultSet {
 
     @Override
     public boolean wasNull() throws SQLException {
-        if(lastIndexRead >= 0)
-        {
+        if (lastIndexRead >= 0) {
             return getString(lastIndexRead) == null;
-        }
-        else
-        {
+        } else {
             throw new SQLException("[Execption in was null]");
         }
     }
@@ -296,14 +276,14 @@ public class DASJResultSet implements ResultSet {
     public boolean getBoolean(int columnIndex) throws SQLException {
         String s = getString(columnIndex);
         boolean ret = false;
-        if (s != null)
-        {
-            if (s.equals("1"))
+        if (s != null) {
+            if (s.equals("1")) {
                 ret = true;
-            else if (s.equals("0"))
+            } else if (s.equals("0")) {
                 ret = false;
-            else
+            } else {
                 ret = Boolean.valueOf(s);
+            }
         }
         return ret;
     }
@@ -311,14 +291,10 @@ public class DASJResultSet implements ResultSet {
     @Override
     public byte getByte(int columnIndex) throws SQLException {
         String s = getString(columnIndex);
-        if (s != null && s.length() != 0)
-        {
+        if (s != null && s.length() != 0) {
             try {
-                Byte b = Byte.parseByte(s);
-                if (b != null)
-                    return b.byteValue();
-            }
-            catch(Exception e){
+                return Byte.parseByte(s);
+            } catch (Exception e) {
                 return 0;
             }
         }
@@ -328,14 +304,10 @@ public class DASJResultSet implements ResultSet {
     @Override
     public short getShort(int columnIndex) throws SQLException {
         String s = getString(columnIndex);
-        if (s != null && s.length() != 0)
-        {
+        if (s != null && s.length() != 0) {
             try {
-                Short sh = Short.parseShort(s);
-                if (sh != null)
-                    return sh.shortValue();
-            }
-            catch(Exception e){
+                return Short.parseShort(s);
+            } catch (Exception e) {
                 return 0;
             }
         }
@@ -345,14 +317,10 @@ public class DASJResultSet implements ResultSet {
     @Override
     public int getInt(int columnIndex) throws SQLException {
         String s = getString(columnIndex);
-        if (s != null && s.length() != 0)
-        {
+        if (s != null && s.length() != 0) {
             try {
-                Integer i = Integer.parseInt(s);
-                if (i != null)
-                    return i.intValue();
-            }
-            catch(Exception e){
+                return Integer.parseInt(s);
+            } catch (Exception e) {
                 return 0;
             }
         }
@@ -362,14 +330,10 @@ public class DASJResultSet implements ResultSet {
     @Override
     public long getLong(int columnIndex) throws SQLException {
         String s = getString(columnIndex);
-        if (s != null && s.length() != 0)
-        {
+        if (s != null && s.length() != 0) {
             try {
-                Long l = Long.parseLong(s);
-                if (l != null)
-                    return l.longValue();
-            }
-            catch(Exception e){
+                return  Long.parseLong(s);
+            } catch (Exception e) {
                 return 0;
             }
         }
@@ -379,14 +343,10 @@ public class DASJResultSet implements ResultSet {
     @Override
     public float getFloat(int columnIndex) throws SQLException {
         String s = getString(columnIndex);
-        if (s != null && s.length() != 0)
-        {
+        if (s != null && s.length() != 0) {
             try {
-                Float f = Float.parseFloat(s);
-                if (f != null)
-                    return f.floatValue();
-            }
-            catch(Exception e){
+                return Float.parseFloat(s);
+            } catch (Exception e) {
                 return 0;
             }
         }
@@ -396,14 +356,10 @@ public class DASJResultSet implements ResultSet {
     @Override
     public double getDouble(int columnIndex) throws SQLException {
         String s = getString(columnIndex);
-        if (s != null && s.length() != 0)
-        {
+        if (s != null && s.length() != 0) {
             try {
-                Double d = Double.parseDouble(s);
-                if (d != null)
-                    return d.doubleValue();
-            }
-            catch(Exception e){
+                return Double.parseDouble(s);
+            } catch (Exception e) {
                 return 0;
             }
         }
@@ -418,8 +374,9 @@ public class DASJResultSet implements ResultSet {
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
         String s = getString(columnIndex);
-        if (s != null)
+        if (s != null) {
             return ServiceUtil.parseBytes(s);
+        }
         return null;
     }
 
@@ -436,16 +393,18 @@ public class DASJResultSet implements ResultSet {
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
         Object o = getObject(columnIndex);
-        if (o instanceof Date)
-            o = new Timestamp(((Date)o).getTime());
+        if (o instanceof Date) {
+            o = new Timestamp(((Date) o).getTime());
+        }
         return (Timestamp) o;
     }
 
     @Override
     public InputStream getAsciiStream(int columnIndex) throws SQLException {
         String s = getString(columnIndex);
-        if (s != null)
+        if (s != null) {
             return ServiceUtil.getAsciiStream(s);
+        }
         return null;
     }
 
@@ -539,6 +498,80 @@ public class DASJResultSet implements ResultSet {
         return getBinaryStream(findColumn(columnLabel));
     }
 
+    /*
+     *Retrieves the number, types and properties of this ResultSet object's columns.
+     */
+    @Override
+    public ResultSetMetaData getMetaData() throws SQLException {
+        if (resultSetMetaData == null) {
+            String[] readerTypeNames = reader.getColumnTypes();
+            String[] readerColumnNames = reader.getColumnNames();
+            int[] readerColumnSizes = reader.getColumnSizes();
+            String tableAlias = reader.getTableAlias();
+            int columnCount = queryEnvironment.size();
+            String[] columnNames = new String[columnCount];
+            String[] columnLabels = new String[columnCount];
+            int[] columnSizes = new int[columnCount];
+            String[] typeNames = new String[columnCount];
+            /*
+             * Create a record containing dummy values.
+			 */
+            HashSet<String> allReaderColumns = new HashSet<String>();
+            HashMap<String, Object> env = new HashMap<String, Object>();
+            for (int i = 0; i < readerTypeNames.length; i++) {
+                Object literal = ServiceUtil.getLiteral(readerTypeNames[i]);
+                String columnName = readerColumnNames[i].toUpperCase();
+                env.put(columnName, literal);
+                allReaderColumns.add(columnName);
+                if (tableName != null) {
+                    env.put(tableName.toUpperCase() + "." + columnName, literal);
+                    allReaderColumns.add(tableName.toUpperCase() + "." + columnName);
+                }
+                if (tableAlias != null) {
+                    env.put(tableAlias + "." + columnName, literal);
+                    allReaderColumns.add(tableAlias + "." + columnName);
+                }
+            }
+
+            for (int i = 0; i < columnCount; i++) {
+                Object[] o = queryEnvironment.get(i);
+                columnNames[i] = (String) o[0];
+                columnLabels[i] = columnNames[i];
+
+				/*
+				 * Evaluate each expression to check the data type
+				 */
+                Object result = null;
+                try {
+                    Expression expr = ((Expression) o[1]);
+                    int columnSize = ServiceConstants.DAS_DRIVER_SETTINGS.DEFAULT_COLUMN_SIZE;
+                    if (expr instanceof ColumnName) {
+                        String usedColumn = expr.getFilteredColumns(allReaderColumns).get(0);
+                        for (int k = 0; k < readerColumnNames.length; k++) {
+                            if (usedColumn.equalsIgnoreCase(readerColumnNames[k])) {
+                                columnSize = readerColumnSizes[k];
+                                break;
+                            }
+                        }
+                    }
+                    columnSizes[i] = columnSize;
+                    result = expr.eval(env);
+                } catch (NullPointerException e) {
+                    e.printStackTrace();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                if (result != null) {
+                    typeNames[i] = ServiceUtil.getSQLType(result);
+                } else {
+                    typeNames[i] = "expression";
+                }
+            }
+            resultSetMetaData = new DASJResultSetMetaData(tableName, columnNames, columnLabels, typeNames, columnSizes);
+        }
+        return resultSetMetaData;
+    }
+
     @Override
     public SQLWarning getWarnings() throws SQLException {
         throw new SQLException("MethodNotSupported: ResultSet.getWarnings");
@@ -555,111 +588,21 @@ public class DASJResultSet implements ResultSet {
     }
 
     @Override
-    public ResultSetMetaData getMetaData() throws SQLException {
-        if(resultSetMetaData == null){
-
-            String[] readerTypeNames = reader.getColumnTypes();
-            String[] readerColumnNames = reader.getColumnNames();
-            int[] readerColumnSizes = reader.getColumnSizes();
-            String tableAlias = reader.getTableAlias();
-            int columnCount = queryEnvironment.size();
-            String []columnNames = new String[columnCount];
-            String []columnLabels = new String[columnCount];
-            int []columnSizes = new int[columnCount];
-            String []typeNames = new String[columnCount];
-
-            /*
-			 * Create a record containing dummy values.
-			 */
-            HashSet<String> allReaderColumns = new HashSet<String>();
-            HashMap<String, Object> env = new HashMap<String, Object>();
-            for(int i=0; i<readerTypeNames.length; i++)
-            {
-                Object literal = ServiceUtil.getLiteral(readerTypeNames[i]);
-                String columnName = readerColumnNames[i].toUpperCase();
-                env.put(columnName, literal);
-                allReaderColumns.add(columnName);
-                if (tableName != null)
-                {
-                    env.put(tableName.toUpperCase() + "." + columnName, literal);
-                    allReaderColumns.add(tableName.toUpperCase() + "." + columnName);
-                }
-                if (tableAlias != null)
-                {
-                    env.put(tableAlias + "." + columnName, literal);
-                    allReaderColumns.add(tableAlias + "." + columnName);
-                }
-            }
-
-
-            for(int i=0; i<columnCount; i++)
-            {
-                Object[] o = queryEnvironment.get(i);
-                columnNames[i] = (String)o[0];
-                columnLabels[i] = columnNames[i];
-
-				/*
-				 * Evaluate each expression to check the data type
-				 */
-                Object result = null;
-                try
-                {
-                    Expression expr = ((Expression)o[1]);
-
-                    int columnSize = DataReader.DEFAULT_COLUMN_SIZE;
-                    if (expr instanceof ColumnName)
-                    {
-                        String usedColumn = expr.getFilteredColumns(allReaderColumns).get(0);
-                        for (int k = 0; k < readerColumnNames.length; k++)
-                        {
-                            if (usedColumn.equalsIgnoreCase(readerColumnNames[k]))
-                            {
-                                columnSize = readerColumnSizes[k];
-                                break;
-                            }
-                        }
-                    }
-                    columnSizes[i] = columnSize;
-                    result = expr.eval(env);
-                }
-                catch (NullPointerException e)
-                {
-                    e.printStackTrace();
-                }
-                catch(Exception e){
-                    e.printStackTrace();
-                }
-                if (result != null)
-                    typeNames[i] = ServiceUtil.getSQLType(result);
-                else
-                    typeNames[i] = "expression";
-            }
-
-            resultSetMetaData = new DASJResultSetMetaData(tableName, columnNames, columnLabels, typeNames,columnSizes);
-        }
-        return resultSetMetaData;
-    }
-
-    @Override
     public Object getObject(int columnIndex) throws SQLException {
-
         lastIndexRead = columnIndex;
-
         checkStatus();
 
-        if (columnIndex < 1 || columnIndex > this.queryEnvironment.size())
-        {
-            throw new SQLException("[InvalidColumnIndex] DASJResultSet:getObject:"+columnIndex);
+        if (columnIndex < 1 || columnIndex > this.queryEnvironment.size()) {
+            throw new SQLException("[InvalidColumnIndex] DASJResultSet:getObject:" + columnIndex);
         }
-        if (this.currentRow == 0)
-        {
+        if (this.currentRow == 0) {
             throw new SQLException("[CurserNotSet] DASJResultSet:getObject");
         }
 
-
-        Object[] o = queryEnvironment.get(columnIndex-1);
-        if (recordEnvironment != null)
+        Object[] o = queryEnvironment.get(columnIndex - 1);
+        if (recordEnvironment != null) {
             return ((Expression) o[1]).eval(recordEnvironment);
+        }
         return null;
     }
 
@@ -671,14 +614,14 @@ public class DASJResultSet implements ResultSet {
     @Override
     public int findColumn(String columnLabel) throws SQLException {
         checkStatus();
-
-        if (columnLabel.equals(""))
+        if (columnLabel.equals("")) {
             throw new SQLException("[InvalidColumnName:findColumn() " + columnLabel);
-        for (int i = 0; i < this.queryEnvironment.size(); i++)
-        {
+        }
+        for (int i = 0; i < this.queryEnvironment.size(); i++) {
             Object[] queryEnvEntry = this.queryEnvironment.get(i);
-            if(((String)queryEnvEntry[0]).equalsIgnoreCase(columnLabel))
-                return i+1;
+            if (((String) queryEnvEntry[0]).equalsIgnoreCase(columnLabel)) {
+                return i + 1;
+            }
         }
         throw new SQLException("[InvalidColumnName:findColumn()" + columnLabel);
     }
@@ -686,33 +629,31 @@ public class DASJResultSet implements ResultSet {
     @Override
     public Reader getCharacterStream(int columnIndex) throws SQLException {
         String str = getString(columnIndex);
-        if (str != null)
+        if (str != null) {
             return new StringReader(str);
-        else
+        } else {
             return null;
+        }
     }
 
     @Override
     public Reader getCharacterStream(String columnLabel) throws SQLException {
         String str = getString(columnLabel);
-        if (str != null)
+        if (str != null) {
             return new StringReader(str);
-        else
+        } else {
             return null;
+        }
     }
 
     @Override
     public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
         BigDecimal val = null;
         String str = getString(columnIndex);
-        if(str != null)
-        {
-            try
-            {
+        if (str != null) {
+            try {
                 val = new BigDecimal(str);
-            }
-            catch (NumberFormatException e)
-            {
+            } catch (NumberFormatException e) {
                 throw new SQLException("[BigDecimalConversionError]: " + str);
             }
         }
@@ -727,111 +668,88 @@ public class DASJResultSet implements ResultSet {
     @Override
     public boolean isBeforeFirst() throws SQLException {
         checkStatus();
-        if(isScrollable()){
-            return  currentRow ==0;
-        }
-        else{
+        if (isScrollable()) {
+            return currentRow == 0;
+        } else {
             throw new SQLException("wrongResultSetType: ResultSet.isBeforeFirst()");
         }
-
     }
 
     @Override
     public boolean isAfterLast() throws SQLException {
         checkStatus();
-        if (isScrollable())
-        {
+        if (isScrollable()) {
             return currentRow == bufferedRecordEnvironments.size() + 1;
-        }
-        else
-        {
-			return (this.nextResult == false && this.currentRow > 0);
+        } else {
+            return (!this.nextResult && this.currentRow > 0);
         }
     }
 
     @Override
     public boolean isFirst() throws SQLException {
         checkStatus();
-
-        if (isScrollable())
-        {
+        if (isScrollable()) {
             return currentRow == 1;
-        }
-        else
-        {
+        } else {
             throw new SQLException("wrongResultSetType: ResultSet.isFirst()");
         }
     }
 
     @Override
     public boolean isLast() throws SQLException {
-        return false; //TODO:implement
+        return false;
     }
 
     @Override
     public void beforeFirst() throws SQLException {
-        //TODO:implement
     }
 
     @Override
     public void afterLast() throws SQLException {
-        checkStatus();
-
-        if (isScrollable())
-        {
-            while(next());
-        }
-        else
-        {
-            throw new SQLException("wrongResultSetType: ResultSet.afterLast()");
-        }
     }
 
     @Override
     public boolean first() throws SQLException {
-        return false; //TODO:implement
+        return false;
     }
 
     @Override
     public boolean last() throws SQLException {
-        return false; //TODO:implement
+        return false;
     }
 
     @Override
     public int getRow() throws SQLException {
         checkStatus();
-
-        if (isScrollable() == false && nextResult == false)
+        if (!isScrollable() && !nextResult) {
             return 0;
-        else
+        } else {
             return currentRow;
+        }
     }
 
     @Override
     public boolean absolute(int row) throws SQLException {
-        return false; //TODO:implement
+        return false;
     }
 
     @Override
     public boolean relative(int rows) throws SQLException {
-        return false; //TODO:implement
+        return false;
     }
 
     @Override
     public boolean previous() throws SQLException {
-        return false; //TODO:implement
+        return false;
     }
 
     @Override
     public void setFetchDirection(int direction) throws SQLException {
         if (direction == ResultSet.FETCH_FORWARD ||
                 direction == ResultSet.FETCH_REVERSE ||
-                direction == ResultSet.FETCH_UNKNOWN)
-        {
+                direction == ResultSet.FETCH_UNKNOWN) {
             this.fetchDirection = direction;
-        }
-        else
-        {
+        } else {
             throw new SQLException("ResultSet-setFetchDirection:unsupportedDirection:" + direction);
         }
     }
@@ -1258,7 +1176,7 @@ public class DASJResultSet implements ResultSet {
 
     @Override
     public int getHoldability() throws SQLException {
-        return 0;
+        return ResultSet.HOLD_CURSORS_OVER_COMMIT;
     }
 
     @Override
@@ -1498,13 +1416,14 @@ public class DASJResultSet implements ResultSet {
 
     protected void checkStatus() throws SQLException
     {
-        if (connectionClosed)
+        if (connectionClosed) {
             throw new SQLException("[Closed Statement]: Driver.getParentLogger()");
+        }
     }
 
     private boolean isScrollable()
     {
-        return (this.resultSetType == ResultSet.TYPE_SCROLL_INSENSITIVE ||
-                this.resultSetType == ResultSet.TYPE_SCROLL_SENSITIVE);
+        return (this.resultSetType == ResultSet.TYPE_SCROLL_INSENSITIVE
+                        || this.resultSetType == ResultSet.TYPE_SCROLL_SENSITIVE);
     }
 }

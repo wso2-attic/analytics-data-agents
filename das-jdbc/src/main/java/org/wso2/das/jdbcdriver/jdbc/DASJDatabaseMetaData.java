@@ -1,22 +1,20 @@
 /*
- *  Copyright (c) 2005-2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2016, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
- *  WSO2 Inc. licenses this file to you under the Apache License,
- *  Version 2.0 (the "License"); you may not use this file except
- *  in compliance with the License.
- *  You may obtain a copy of the License at
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing,
- *  software distributed under the License is distributed on an
- *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  KIND, either express or implied.  See the License for the
- *  specific language governing permissions and limitations
- *  under the License.
- *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
-
 package org.wso2.das.jdbcdriver.jdbc;
 
 import org.wso2.das.jdbcdriver.dasInterface.DataReader;
@@ -24,71 +22,36 @@ import org.wso2.das.jdbcdriver.expressions.AsteriskExpression;
 import org.wso2.das.jdbcdriver.common.ServiceConstants;
 import org.wso2.das.jdbcdriver.common.ServiceUtil;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.RowIdLifetime;
+import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * This class implements the java.sql.DatabaseMetaData interface for the DASJDriver driver.
+ * This provides Comprehensive information about the database as a whole.
  */
 public class DASJDatabaseMetaData implements DatabaseMetaData {
     private Connection connection;
     private DASJStatement statement;
 
-    public DASJDatabaseMetaData(Connection conn){
+    public DASJDatabaseMetaData(Connection conn) {
         connection = conn;
     }
-    @Override
-    public boolean allProceduresAreCallable() throws SQLException {
-        return false;
-    }
 
     @Override
-    public boolean allTablesAreSelectable() throws SQLException {
-        return false;
-    }
-
-    @Override
-    /**
-     * Retrieves the URL for this DBMS.
-     */
     public String getURL() throws SQLException {
-        return ((DASJConnection)connection).getURL();
+        return ((DASJConnection) connection).getURL();
     }
 
     @Override
-    public String getUserName() throws SQLException {
-        return "unknown";
-    }
-
-    @Override
-    public boolean isReadOnly() throws SQLException {
-        return false;
-    }
-
-    @Override
-    public boolean nullsAreSortedHigh() throws SQLException {
-        return false;
-    }
-
-    @Override
-    public boolean nullsAreSortedLow() throws SQLException {
-        return false;
-    }
-
-    @Override
-    public boolean nullsAreSortedAtStart() throws SQLException {
-        return false;
-    }
-
-    @Override
-    public boolean nullsAreSortedAtEnd() throws SQLException {
-        return false;
-    }
-
-    @Override
-    public String getDatabaseProductName() throws SQLException {
-        return ServiceConstants.DAS_DRIVER_SETTINGS.DAS_DRIVER_NAME;
+    public Connection getConnection() throws SQLException {
+        return connection;
     }
 
     @Override
@@ -114,6 +77,335 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     @Override
     public int getDriverMinorVersion() {
         return ServiceConstants.DAS_VERSIONS.DAS_DRIVER_MINOR_VERSION;
+    }
+
+    @Override
+    public String getDatabaseProductName() throws SQLException {
+        return ServiceConstants.DAS_DRIVER_SETTINGS.DAS_DRIVER_NAME;
+    }
+
+    @Override
+    public ResultSet getSchemas() throws SQLException {
+        Object[] data = new Object[] { ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, null };
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        columnValues.add(data);
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.SCHEMAS,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.SCHEMAS,  columnValues);
+    }
+
+    @Override
+    public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types)
+            throws SQLException {
+        List<String> listTables = ((DASJConnection) connection).getTableNames();
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>(listTables.size());
+        boolean bMatchType = false;
+
+        if (types == null) {
+            bMatchType = true;
+        } else {
+            for (String type : types) {
+                if (type.equals("TABLE")) {
+                    bMatchType = true;
+                }
+            }
+        }
+        for(String tableName : listTables) {
+            if (bMatchType && (tableNamePattern == null || ServiceUtil
+                    .isPatternMatched(tableNamePattern, ServiceConstants.DAS_SERVICE_QUERIES.DEFAULT_ESCAPE_STRING,
+                            tableName))) {
+                Object[] data = new Object[] { ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME,
+                        ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, tableName, "TABLE", "", null, null, null,
+                        null, null };
+                columnValues.add(data);
+            }
+        }
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.TABLES,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.TABLES, columnValues);
+    }
+
+    /**
+     * Retrieves a description of table columns available in the specified catalog.
+     */
+    @Override
+    public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern)
+            throws SQLException {
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        System.out.println("DAS Columns:catalog:" + catalog + "|schemaPattern:" + schemaPattern + "|tableNamePattern:"
+                + tableNamePattern + "|columnNamePattern:" + columnNamePattern);
+
+        if (statement == null) {
+            statement = (DASJStatement) connection.createStatement();
+        }
+        ResultSet resultSetTableList = getTables(catalog, schemaPattern, tableNamePattern, null);
+
+        ResultSet resultSetTableData;
+        Integer columnSize = Integer.valueOf(Short.MAX_VALUE);
+        Integer decimalDigits = Integer.valueOf(Short.MAX_VALUE);
+        Integer radix = 10;
+        Integer nullable = columnNullable;
+        String tableCat = null;
+        Integer buffLength = 0;
+        String remarks = null;
+        String columnDef = null;
+        Integer sqlDataType = 0;
+        Integer sqlDateTimeSub = 0;
+        String isNullable = "YES";
+        String isAutoIncrement = "NO";
+
+        while (resultSetTableList.next()) {
+            String tableName = resultSetTableList.getString(3);
+            resultSetTableData = statement.executeQuery("SELECT * FROM " + tableName + ";");
+            ResultSetMetaData metadata = resultSetTableData.getMetaData();
+
+            int columnCount = metadata.getColumnCount();
+
+            for (int i = 0; i < columnCount; i++) {
+                String columnName = metadata.getColumnName(i + 1);
+
+                if (columnNamePattern == null || ServiceUtil
+                        .isPatternMatched(columnNamePattern, ServiceConstants.DAS_SERVICE_QUERIES.DEFAULT_ESCAPE_STRING,
+                                columnName)) {
+                    int columnType = metadata.getColumnType(i + 1);
+                    String columnTypeName = metadata.getColumnTypeName(i + 1);
+
+                    Object data[] = { tableCat, ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, tableName,
+                            columnName, columnType, columnTypeName, columnSize, buffLength,
+                            decimalDigits, radix, nullable, remarks, columnDef, sqlDataType, sqlDateTimeSub, columnSize,
+                            i + 1, isNullable, null, null, null, null, isAutoIncrement };
+                    columnValues.add(data);
+                }
+            }
+        }
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.COLUMNS,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.COLUMNS, columnValues);
+    }
+
+    /**
+     *Retrieves a description of the given table's primary key columns.
+     */
+    @Override
+    public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
+        System.out.println("catalog:" + catalog + "|schema:" + schema + "|table:" + table);
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+
+        List<String> primaryKeys = ((DASJConnection) connection).getPrimaryKeys(table);
+        int iSeq = 0;
+        for (String key : primaryKeys) {
+            ++iSeq;
+            Object data[] = { catalog, ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, table, key, iSeq, key };
+            columnValues.add(data);
+        }
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.PRIMARYKEYS,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.PRIMARYKEYS,  columnValues);
+    }
+
+    /**
+     * Retrieves a description of the given table's indices and statistics.
+     */
+    @Override
+    public ResultSet getIndexInfo(String catalog, String schema, String table, boolean unique, boolean approximate)
+            throws SQLException {
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<String> indexColumns = ((DASJConnection) connection).getIndexes(table);
+
+        boolean bNonUnique = false;
+        String indexQualifier = null;
+        String sAscOrDesc = null;
+        int cardinality = 0;
+        int pages = 0;
+        String filterCondition = null;
+
+        int iSeq = 0;
+        for (String key : indexColumns) {
+            ++iSeq;
+            Object data[] = { catalog, ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, table, bNonUnique,
+                    indexQualifier, key, tableIndexOther, iSeq, key, sAscOrDesc, cardinality, pages,
+                    filterCondition };
+            columnValues.add(data);
+        }
+
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.INDEXINFO,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.INDEXINFO, columnValues);
+    }
+
+    /**
+     * Retrieves the table types available in this database
+     */
+    @Override
+    public ResultSet getTableTypes() throws SQLException {
+        Object[] data = new Object[] { "TABLE" };
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        columnValues.add(data);
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.TABLETYPES,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.TABLETYPES, columnValues);
+    }
+
+    @Override
+    public ResultSet getImportedKeys(String catalog, String schema, String table) throws SQLException {
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.IMPORTEDKEYS,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.IMPORTEDKEYS, columnValues);
+    }
+
+    /**
+     * Retrieves a description of the foreign key columns that reference the given table's primary key columns
+     */
+    @Override
+    public ResultSet getExportedKeys(String catalog, String schema, String table) throws SQLException {
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.EXPORTEDKEYS,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.EXPORTEDKEYS, columnValues);
+    }
+
+    /**
+     * Retrieves a description of the stored procedures available in the given catalog.
+     */
+    @Override
+    public ResultSet getProcedures(String catalog, String schemaPattern, String procedureNamePattern)
+            throws SQLException {
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.PROCEDURES,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.PROCEDURES, columnValues);
+    }
+
+    /**
+     * Retrieves the catalog names available in this database
+     */
+    @Override
+    public ResultSet getCatalogs() throws SQLException {
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.CATALOGS,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.CATALOGS,columnValues);
+    }
+
+    @Override
+    public ResultSet getColumnPrivileges(String catalog, String schema, String table,
+            String columnNamePattern) throws SQLException {
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.COLUMNPRIVILEGES,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.COLUMNPRIVILEGES, columnValues);
+    }
+
+    /**
+     * Retrieves a description of the access rights for each table available in a catalog.
+     */
+    @Override
+    public ResultSet getTablePrivileges(String catalog, String schemaPattern, String tableNamePattern)
+            throws SQLException {
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.TABLEPRIVILEGES,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.TABLEPRIVILEGES, columnValues);
+    }
+
+    @Override
+    public ResultSet getBestRowIdentifier(String catalog, String schema, String table, int scope,
+            boolean nullable) throws SQLException {
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.BESTROWID,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.BESTROWID, columnValues);
+    }
+
+    /**
+     *Retrieves a description of a table's columns that are automatically updated when any value in a row is updated.
+     */
+    @Override
+    public ResultSet getVersionColumns(String catalog, String schema, String table) throws SQLException {
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.VERSIONCOLUMNS,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.VERSIONCOLUMNS, columnValues);
+    }
+
+    /**
+     * Retrieves a description of all the data types supported by this database.
+     */
+    @Override
+    public ResultSet getTypeInfo() throws SQLException {
+        List<Object[]> columnValues = getColumnTypeInfo();
+       return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.TYPEINFO,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.TYPEINFO, columnValues);
+    }
+
+    /**
+     * Retrieves a description of the user-defined types (UDTs) defined in a particular schema.
+     */
+    @Override
+    public ResultSet getUDTs(String catalog, String schemaPattern, String typeNamePattern, int[] types)
+            throws SQLException {
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.UDT,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.UDT, columnValues);
+    }
+
+    /**
+     * Retrieves a description of the pseudo or hidden columns available in a given table
+     */
+    @Override
+    public ResultSet getPseudoColumns(String catalog, String schemaPattern, String tableNamePattern,
+            String columnNamePattern) throws SQLException {
+        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.PSEUDOCOLUMNS,
+                ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.PSEUDOCOLUMNS, columnValues);
+    }
+
+    /**
+     * Retrieves whether this database supports the given result set type.
+     */
+    @Override
+    public boolean supportsResultSetType(int type) throws SQLException {
+        return type == ResultSet.TYPE_FORWARD_ONLY || type == ResultSet.TYPE_SCROLL_SENSITIVE;
+    }
+
+    @Override
+    public String getIdentifierQuoteString() throws SQLException {
+        return "\"";
+    }
+
+    @Override
+    public String getUserName() throws SQLException {
+        return ((DASJConnection) connection).getUserName();
+    }
+
+    /**
+     *Retrieves whether this database supports the given result set holdability.
+     */
+    @Override
+    public boolean supportsResultSetHoldability(int holdability) throws SQLException {
+        return (holdability == ResultSet.HOLD_CURSORS_OVER_COMMIT);
+    }
+
+    @Override
+    public boolean allProceduresAreCallable() throws SQLException {
+        return false;
+    }
+
+    @Override
+    public boolean allTablesAreSelectable() throws SQLException {
+        return false;
+    }
+
+    @Override
+    public boolean isReadOnly() throws SQLException {
+        return false;
+    }
+
+    @Override
+    public boolean nullsAreSortedHigh() throws SQLException {
+        return false;
+    }
+
+    @Override
+    public boolean nullsAreSortedLow() throws SQLException {
+        return false;
+    }
+
+    @Override
+    public boolean nullsAreSortedAtStart() throws SQLException {
+        return false;
+    }
+
+    @Override
+    public boolean nullsAreSortedAtEnd() throws SQLException {
+        return false;
     }
 
     @Override
@@ -164,11 +456,6 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     @Override
     public boolean storesMixedCaseQuotedIdentifiers() throws SQLException {
         return false;
-    }
-
-    @Override
-    public String getIdentifierQuoteString() throws SQLException {
-        return "\"";
     }
 
     @Override
@@ -632,317 +919,15 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    /**
-     * Retrieves a description of the stored procedures available in the given catalog.
-     */
-    public ResultSet getProcedures(String catalog, String schemaPattern, String procedureNamePattern) throws SQLException {
-        String columnNames = "PROCEDURE_CAT,PROCEDURE_SCHEM,PROCEDURE_NAME,reserved4,reserved5,reserved6,REMARKS,PROCEDURE_TYPE,SPECIFIC_NAME";
-        String columnTypes = "String,String,String,String,String,String,String,Short,String";
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        ResultSet retval = createResultSet(columnNames, columnTypes, columnValues);
-        return retval;
-    }
-
-    @Override
-    public ResultSet getProcedureColumns(String catalog, String schemaPattern, String procedureNamePattern, String columnNamePattern) throws SQLException {
+    public ResultSet getProcedureColumns(String catalog, String schemaPattern, String procedureNamePattern,
+            String columnNamePattern) throws SQLException {
         return null;
     }
 
     @Override
-    public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types) throws SQLException {
-
-        String columnNames = "TABLE_CAT,TABLE_SCHEM,TABLE_NAME,TABLE_TYPE," +
-                "REMARKS,TYPE_CAT,TYPE_SCHEM,TYPE_NAME,SELF_REFERENCING_COL_NAME,REF_GENERATION";
-
-        String columnTypes = "String,String,String,String,String,String,String,String,String,String";
-
-        List<String> listTables = ((DASJConnection) connection).getTableNames();
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>(listTables.size());
-
-        boolean bMatchType = false;
-
-        if (types == null)
-        {
-            bMatchType = true;
-        }
-        else
-        {
-            for (int i = 0; i < types.length; i++)
-            {
-                if (types[i].equals("TABLE"))
-                    bMatchType = true;
-            }
-        }
-
-        for (int i = 0; i < listTables.size(); i++)
-        {
-            String tableName = listTables.get(i);
-            if (bMatchType && (tableNamePattern == null || ServiceUtil.isPatternMatched(tableNamePattern, ServiceConstants.DAS_SERVICE_QUERIES.DEFAULT_ESCAPE_STRING, tableName)))
-            {
-                Object[] data = new Object[]{ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, tableName, "TABLE", "",null, null, null, null, null};
-                columnValues.add(data);
-            }
-        }
-        ResultSet retval = createResultSet(columnNames, columnTypes, columnValues);
-        return retval;
-    }
-
-    @Override
-    public ResultSet getSchemas() throws SQLException {
-        String columnNames = "TABLE_SCHEM,TABLE_CATALOG";
-        String columnTypes = "String,String";
-        Object[] data = new Object[]
-                { ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, null };
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        columnValues.add(data);
-        ResultSet retval = createResultSet(columnNames, columnTypes, columnValues);
-        return retval;
-    }
-
-    @Override
-    /**
-     * Retrieves the catalog names available in this databas
-     */
-    public ResultSet getCatalogs() throws SQLException {
-        String columnNames = "TABLE_CAT";
-        String columnTypes = "String";
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        ResultSet retval = createResultSet(columnNames, columnTypes,columnValues);
-        return retval;
-    }
-
-    @Override
-    /**
-     * Retrieves the table types available in this database
-     */
-    public ResultSet getTableTypes() throws SQLException {
-        String columnNames = "TABLE_TYPE";
-        String columnTypes = "String";
-        Object[] data = new Object[]{"TABLE"};
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        columnValues.add(data);
-        ResultSet retval = createResultSet(columnNames, columnTypes, columnValues);
-        return retval;
-    }
-
-    @Override
-    /**
-     * Retrieves a description of table columns available in the specified catalog.
-     */
-
-    public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException {
-        String columnNames = "TABLE_CAT,TABLE_SCHEM,TABLE_NAME,COLUMN_NAME,DATA_TYPE,TYPE_NAME,COLUMN_SIZE,BUFFER_LENGTH,"
-                + "DECIMAL_DIGITS,NUM_PREC_RADIX,NULLABLE,REMARKS,COLUMN_DEF,SQL_DATA_TYPE,SQL_DATETIME_SUB,CHAR_OCTET_LENGTH,"
-                + "ORDINAL_POSITION,IS_NULLABLE,SCOPE_CATLOG,SCOPE_SCHEMA,SCOPE_TABLE,SOURCE_DATA_TYPE,IS_AUTOINCREMENT";
-
-        String columnTypes = "String,String,String,String,Integer,String,Integer,Integer,Integer,Integer,Integer,"
-                + "String,String,Integer,Integer,Integer,Integer,String,String,String,String,Short,String";
-
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        ResultSet retval = createResultSet(columnNames, columnTypes, columnValues);
-
-        System.out.println("DAS Columns:catalog:"+catalog+"|schemaPattern:"+schemaPattern+"|tableNamePattern:"+tableNamePattern+"|columnNamePattern:"+columnNamePattern);
-
-        if (statement == null)
-            statement = (DASJStatement) connection.createStatement();
-        ResultSet resultSetTableList = getTables(catalog,schemaPattern,tableNamePattern,null);
-
-        ResultSet resultSetTableData=null;
-        Integer columnSize = Integer.valueOf(Short.MAX_VALUE);
-        Integer decimalDigits = Integer.valueOf(Short.MAX_VALUE);
-        Integer radix = Integer.valueOf(10);
-        Integer nullable = Integer.valueOf(columnNullable);
-        String tableCat = null;
-        Integer buffLength = Integer.valueOf(0);
-        String remarks = null;
-        String columnDef = null;
-        Integer sqlDataType = Integer.valueOf(0);
-        Integer sqlDateTimeSub = Integer.valueOf(0);
-        String isNullable = "YES";
-        String isAutoIncrement = "NO";
-
-        while (resultSetTableList.next()) {
-            String tableName = resultSetTableList.getString(3);
-            resultSetTableData = statement.executeQuery("SELECT * FROM " + tableName+";");
-            ResultSetMetaData metadata = resultSetTableData.getMetaData();
-
-            int columnCount = metadata.getColumnCount();
-
-            for (int i = 0; i < columnCount; i++)
-            {
-                String columnName = metadata.getColumnName(i + 1);
-
-                if (columnNamePattern == null ||ServiceUtil.isPatternMatched(columnNamePattern, ServiceConstants.DAS_SERVICE_QUERIES.DEFAULT_ESCAPE_STRING, columnName)) {
-
-                    int columnType = metadata.getColumnType(i + 1);
-                    String columnTypeName = metadata.getColumnTypeName(i + 1);
-
-                    Object data[] = {tableCat, ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, tableName, columnName, Integer.valueOf(columnType), columnTypeName,
-                            columnSize, buffLength, decimalDigits, radix, nullable, remarks, columnDef, sqlDataType, sqlDateTimeSub, columnSize,
-                            Integer.valueOf(i + 1), isNullable, null, null, null, null, isAutoIncrement};
-                    columnValues.add(data);
-                }
-
-            }
-        }
-
-        return retval;
-    }
-
-    @Override
-    public ResultSet getColumnPrivileges(String catalog, String schema, String table, String columnNamePattern) throws SQLException {
-        String columnNames = "TABLE_CAT,TABLE_SCHEM,TABLE_NAME,COLUMN_NAME,GRANTOR,GRANTEE,PRIVILEGE,IS_GRANTABLE";
-        String columnTypes = "String,String,String,String,String,String,String,String";
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        ResultSet retval = createResultSet(columnNames, columnTypes, columnValues);
-        return retval;
-    }
-
-    @Override
-    /**
-     * Retrieves a description of the access rights for each table available in a catalog.
-     */
-    public ResultSet getTablePrivileges(String catalog, String schemaPattern, String tableNamePattern) throws SQLException {
-        String columnNames = "TABLE_CAT,TABLE_SCHEM,TABLE_NAME,GRANTOR,GRANTEE,PRIVILEGE,IS_GRANTABLE";
-        String columnTypes = "String,String,String,String,String,String,String";
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        ResultSet retval = createResultSet(columnNames, columnTypes, columnValues);
-        return retval;
-    }
-
-    @Override
-    public ResultSet getBestRowIdentifier(String catalog, String schema, String table, int scope, boolean nullable) throws SQLException {
-        String columnNames = "SCOPE,COLUMN_NAME,DATA_TYPE,TYPE_NAME,COLUMN_SIZE,BUFFER_LENGTH,DECIMAL_DIGITS,PSEUDO_COLUMN";
-        String columnTypes = "Short,String,Integer,String,Integer,Integer,Short,Short";
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        ResultSet retval = createResultSet(columnNames, columnTypes,columnValues);
-        return retval;
-    }
-
-    @Override
-    /**
-     *Retrieves a description of a table's columns that are automatically updated when any value in a row is updated.
-     */
-    public ResultSet getVersionColumns(String catalog, String schema, String table) throws SQLException {
-        String columnNames = "SCOPE,COLUMN_NAME,DATA_TYPE,TYPE_NAME,COLUMN_SIZE,BUFFER_LENGTH,DECIMAL_DIGITS,PSEUDO_COLUMN";
-        String columnTypes = "Short,String,Integer,String,Integer,Integer,Short,Short";
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        ResultSet retval = createResultSet(columnNames, columnTypes,columnValues);
-        return retval;
-    }
-
-    @Override
-    /**
-     *Retrieves a description of the given table's primary key columns.
-     */
-    public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
-        System.out.println("catalog:"+catalog+"|schema:"+schema+"|table:"+table);
-        String columnNames = "TABLE_CAT,TABLE_SCHEM,TABLE_NAME,COLUMN_NAME,KEY_SEQ,PK_NAME";
-        String columnTypes = "String,String,String,String,Short,String";
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-
-        List<String> primaryKeys = ((DASJConnection)connection).getPrimaryKeys(table);
-        int iSeq = 0;
-        for(String key : primaryKeys){
-            ++iSeq;
-            Object data[] = { catalog  , ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, table, key,iSeq, key };
-            columnValues.add(data);
-        }
-        ResultSet retval = createResultSet(columnNames, columnTypes, columnValues);
-        return retval;
-    }
-
-    @Override
-    public ResultSet getImportedKeys(String catalog, String schema, String table) throws SQLException {
-        String columnNames = "PKTABLE_CAT,PKTABLE_SCHEM,PKTABLE_NAME,PKCOLUMN_NAME,FKTABLE_CAT,FKTABLE_SCHEM,"
-                + "FKTABLE_NAME,FKCOLUMN_NAME,KEY_SEQ,UPDATE_RULE,DELETE_RULE,FK_NAME,PK_NAME,DEFERRABILITY";
-        String columnTypes = "String,String,String,String,String,String,String,String,Short,Short,Short,String,String,Short";
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        ResultSet retval = createResultSet(columnNames, columnTypes,columnValues);
-        return retval;
-    }
-
-    @Override
-    /**
-     * Retrieves a description of the foreign key columns that reference the given table's primary key columns
-     */
-    public ResultSet getExportedKeys(String catalog, String schema, String table) throws SQLException {
-        String columnNames = "PKTABLE_CAT,PKTABLE_SCHEM,PKTABLE_NAME,PKCOLUMN_NAME,FKTABLE_CAT,FKTABLE_SCHEM,"
-                + "FKTABLE_NAME,FKCOLUMN_NAME,KEY_SEQ,UPDATE_RULE,DELETE_RULE,FK_NAME,PK_NAME,DEFERRABILITY";
-        String columnTypes = "String,String,String,String,String,String,String,String,Short,Short,Short,String,String,Short";
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        ResultSet retval = createResultSet(columnNames, columnTypes,columnValues);
-        return retval;
-    }
-
-    @Override
-    public ResultSet getCrossReference(String parentCatalog, String parentSchema, String parentTable, String foreignCatalog, String foreignSchema, String foreignTable) throws SQLException {
+    public ResultSet getCrossReference(String parentCatalog, String parentSchema, String parentTable,
+            String foreignCatalog, String foreignSchema, String foreignTable) throws SQLException {
         return null;
-    }
-
-    @Override
-    /**
-     * Retrieves a description of all the data types supported by this database.
-     */
-    public ResultSet getTypeInfo() throws SQLException {
-        String columnNames = "TYPE_NAME,DATA_TYPE,PRECISION,LITERAL_PREFIX,LITERAL_SUFFIX,CREATE_PARAMS," +
-                "NULLABLE,CASE_SENSITIVE,SEARCHABLE,UNSIGNED_ATTRIBUTE,FIXED_PREC_SCALE,AUTO_INCREMENT," +
-                "LOCAL_TYPE_NAME,MINIMUM_SCALE,MAXIMUM_SCALE,SQL_DATA_TYPE,SQL_DATETIME_SUB,NUM_PREC_RADIX";
-        String columnTypes = "String,Integer,Integer,String,String,String,Short,Boolean,Short," +
-                "Boolean,Boolean,Boolean,String,Short,Short,Integer,Integer,Integer";
-        List<Object[]> columnValues = getColumnTypeInfo();
-        ResultSet retval = createResultSet(columnNames, columnTypes, columnValues);
-        return retval;
-    }
-
-
-    @Override
-    /**
-     * Retrieves a description of the given table's indices and statistics.
-     */
-    public ResultSet getIndexInfo(String catalog, String schema, String table, boolean unique, boolean approximate) throws SQLException {
-        String columnNames = "TABLE_CAT,TABLE_SCHEM,TABLE_NAME,NON_UNIQUE,INDEX_QUALIFIER,INDEX_NAME,TYPE," +
-                "ORDINAL_POSITION,COLUMN_NAME,ASC_OR_DESC,CARDINALITY,PAGES,FILTER_CONDITION";
-        String columnTypes = "String,String,String,Boolean,String,String,Short,Short,String,String,Integer,Integer,String";
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-
-        List<String> indexColumns = ((DASJConnection)connection).getIndexes(table);
-
-        boolean bNonUnique = false;
-        String indexQualifier = null;
-        String sAscOrDesc = null;
-        int cardinality = 0;
-        int pages = 0;
-        String filterCondition = null;
-
-        int iSeq = 0;
-        for(String key : indexColumns){
-            ++iSeq;
-            Object data[] = { catalog  , ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, table, bNonUnique,indexQualifier, key,Integer.valueOf(tableIndexOther),iSeq,
-            key,sAscOrDesc,cardinality,pages,filterCondition};
-            columnValues.add(data);
-        }
-
-        ResultSet retval = createResultSet(columnNames, columnTypes, columnValues);
-        return retval;
-    }
-
-    @Override
-    /**
-     * Retrieves whether this database supports the given result set type.
-     */
-    public boolean supportsResultSetType(int type) throws SQLException {
-        if (type == ResultSet.TYPE_FORWARD_ONLY)
-        {
-            return true;
-        }
-
-        if (type == ResultSet.TYPE_SCROLL_SENSITIVE)
-        {
-            return true;
-        }
-
-        return false;
     }
 
     @Override
@@ -1001,23 +986,6 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    /**
-     * Retrieves a description of the user-defined types (UDTs) defined in a particular schema.
-     */
-    public ResultSet getUDTs(String catalog, String schemaPattern, String typeNamePattern, int[] types) throws SQLException {
-        String columnNames = "TYPE_CAT,TYPE_SCHEM,TYPE_NAME,CLASS_NAME,DATA_TYPE,REMARKS,BASE_TYPE";
-        String columnTypes = "String,String,String,String,Integer,String,Short";
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        ResultSet retval = createResultSet(columnNames, columnTypes, columnValues);
-        return retval;
-    }
-
-    @Override
-    public Connection getConnection() throws SQLException {
-        return connection;
-    }
-
-    @Override
     public boolean supportsSavepoints() throws SQLException {
         return false;
     }
@@ -1038,26 +1006,21 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    public ResultSet getSuperTypes(String catalog, String schemaPattern, String typeNamePattern) throws SQLException {
+    public ResultSet getSuperTypes(String catalog, String schemaPattern, String typeNamePattern)
+            throws SQLException {
         return null;
     }
 
     @Override
-    public ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern) throws SQLException {
+    public ResultSet getSuperTables(String catalog, String schemaPattern, String tableNamePattern)
+            throws SQLException {
         return null;
     }
 
     @Override
-    public ResultSet getAttributes(String catalog, String schemaPattern, String typeNamePattern, String attributeNamePattern) throws SQLException {
+    public ResultSet getAttributes(String catalog, String schemaPattern, String typeNamePattern,
+            String attributeNamePattern) throws SQLException {
         return null;
-    }
-
-    @Override
-    /**
-     *Retrieves whether this database supports the given result set holdability.
-     */
-    public boolean supportsResultSetHoldability(int holdability) throws SQLException {
-        return (holdability == ResultSet.HOLD_CURSORS_OVER_COMMIT);
     }
 
     @Override
@@ -1087,7 +1050,7 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
 
     @Override
     public int getSQLStateType() throws SQLException {
-        return 0;
+        return  sqlStateSQL;
     }
 
     @Override
@@ -1126,25 +1089,15 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     }
 
     @Override
-    public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern) throws SQLException {
+    public ResultSet getFunctions(String catalog, String schemaPattern, String functionNamePattern)
+            throws SQLException {
         return null;
     }
 
     @Override
-    public ResultSet getFunctionColumns(String catalog, String schemaPattern, String functionNamePattern, String columnNamePattern) throws SQLException {
+    public ResultSet getFunctionColumns(String catalog, String schemaPattern, String functionNamePattern,
+            String columnNamePattern) throws SQLException {
         return null;
-    }
-
-    @Override
-    /**
-     * Retrieves a description of the pseudo or hidden columns available in a given table
-     */
-    public ResultSet getPseudoColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern) throws SQLException {
-        String columnNames = "TABLE_CAT,TABLE_SCHEM,TABLE_NAME,COLUMN_NAME,DATA_TYPE,COLUMN_SIZE,DECIMAL_DIGITS,NUM_PREC_RADIX,COLUMN_USAGE,REMARKS,CHAR_OCTET_LENGTH,IS_NULLABLE";
-        String columnTypes = "String,String,String,String,Integer,Integer,Integer,Integer,String,String,Integer,String";
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        ResultSet retval = createResultSet(columnNames, columnTypes, columnValues);
-        return retval;
     }
 
     @Override
@@ -1162,119 +1115,86 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
         return false;
     }
 
-    private ResultSet createResultSet(String columnNames, String columnTypes,
-                                      List<Object[]> columnValues) throws SQLException
-    {
+    private ResultSet createResultSet(String columnNames, String columnTypes, List<Object[]> columnValues)
+            throws SQLException {
         DataReader reader = new DataReader(columnNames.split(","), columnTypes.split(","), columnValues);
         ArrayList<Object[]> queryEnvironment = new ArrayList<Object[]>();
-        queryEnvironment.add(new Object[]{"*", new AsteriskExpression("*")});
-        ResultSet rs = null;
+        queryEnvironment.add(new Object[] { "*", new AsteriskExpression("*") });
+        ResultSet rs;
 
-        try
-        {
-            if (statement == null)
+        try {
+            if (statement == null) {
                 statement = (DASJStatement) connection.createStatement();
-
-            rs = new DASJResultSet(statement,reader,"",queryEnvironment,false, ResultSet.TYPE_FORWARD_ONLY,-1,null);
-
-        }
-        catch (ClassNotFoundException e)
-        {
+            }
+            rs = new DASJResultSet(statement, reader, "", queryEnvironment, ResultSet.TYPE_FORWARD_ONLY, -1,
+                    null);
+        } catch (ClassNotFoundException e) {
             throw new SQLException(e.getMessage());
         }
         return rs;
     }
 
-    public List<Object[]> getColumnTypeInfo()
-    {
-        Integer intZero = Integer.valueOf(0);
-        Short shortZero = Short.valueOf((short) 0);
-        Short shortMax = Short.valueOf(Short.MAX_VALUE);
-        Short searchable = Short
-                .valueOf((short) DatabaseMetaData.typeSearchable);
-        Short nullable = Short.valueOf((short) DatabaseMetaData.typeNullable);
+    private List<Object[]> getColumnTypeInfo() {
+        Integer intZero = 0;
+        Short shortZero = 0;
+        Short shortMax = Short.MAX_VALUE;
+        Short searchable = DatabaseMetaData.typeSearchable;
+        Short nullable = DatabaseMetaData.typeNullable;
 
         ArrayList<Object[]> retval = new ArrayList<Object[]>();
 
-        retval.add(new Object[]
-                { "String", Integer.valueOf(Types.VARCHAR), shortMax, "'", "'", null,
-                        nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "String", Types.VARCHAR, shortMax, "'", "'", null, nullable,
+                Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
+                intZero, intZero, intZero });
 
-        retval.add(new Object[]
-                { "Boolean", Integer.valueOf(Types.BOOLEAN), shortMax, null, null,
-                        null, nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "Boolean", Types.BOOLEAN, shortMax, null, null, null, nullable,
+                Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
+                intZero, intZero, intZero });
 
-        retval.add(new Object[]
-                { "Byte", Integer.valueOf(Types.TINYINT), shortMax, null, null, null,
-                        nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "Byte",Types.TINYINT, shortMax, null, null, null, nullable,
+                Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
+                intZero, intZero, intZero });
 
-        retval.add(new Object[]
-                { "Short", Integer.valueOf(Types.SMALLINT), shortMax, null, null, null,
-                        nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "Short", Types.SMALLINT, shortMax, null, null, null, nullable,
+                Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
+                intZero, intZero, intZero });
 
-        retval.add(new Object[]
-                { "Integer", Integer.valueOf(Types.INTEGER), shortMax, null, null,
-                        null, nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "Integer", Types.INTEGER, shortMax, null, null, null, nullable,
+                Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
+                intZero, intZero, intZero });
 
-        retval.add(new Object[]
-                { "Long", Integer.valueOf(Types.BIGINT), shortMax, null, null, null,
-                        nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "Long", Types.BIGINT, shortMax, null, null, null, nullable,
+                Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
+                intZero, intZero, intZero });
 
-        retval.add(new Object[]
-                { "Float", Integer.valueOf(Types.FLOAT), shortMax, null, null, null,
-                        nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "Float", Types.FLOAT, shortMax, null, null, null, nullable,
+                Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
+                intZero, intZero, intZero });
 
-        retval.add(new Object[]
-                { "Double", Integer.valueOf(Types.DOUBLE), shortMax, null, null, null,
-                        nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "Double", Types.DOUBLE, shortMax, null, null, null, nullable,
+                Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
+                intZero, intZero, intZero });
 
-        retval.add(new Object[]
-                { "BigDecimal", Integer.valueOf(Types.DECIMAL), shortMax, null, null,
-                        null, nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "BigDecimal", Types.DECIMAL, shortMax, null, null, null, nullable,
+                Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
+                intZero, intZero, intZero });
 
-        retval.add(new Object[]
-                { "Date", Integer.valueOf(Types.DATE), shortMax, "'", "'", null,
-                        nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "Date", Types.DATE, shortMax, "'", "'", null, nullable, Boolean.TRUE,
+                searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax, intZero, intZero,
+                intZero });
 
-        retval.add(new Object[]
-                { "Time", Integer.valueOf(Types.TIME), shortMax, "'", "'", null,
-                        nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "Time", Types.TIME, shortMax, "'", "'", null, nullable, Boolean.TRUE,
+                searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax, intZero, intZero,
+                intZero });
 
-        retval.add(new Object[]
-                { "Timestamp", Integer.valueOf(Types.TIMESTAMP), shortMax, null, null,
-                        null, nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "Timestamp", Types.TIMESTAMP, shortMax, null, null, null, nullable,
+                Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
+                intZero, intZero, intZero });
 
-        retval.add(new Object[]
-                { "Asciistream", Integer.valueOf(Types.CLOB), shortMax, null, null,
-                        null, nullable, Boolean.TRUE, searchable, Boolean.FALSE,
-                        Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
-                        intZero, intZero, intZero });
+        retval.add(new Object[] { "Asciistream", Types.CLOB, shortMax, null, null, null, nullable,
+                Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
+                intZero, intZero, intZero });
 
         return retval;
     }
-
 }
