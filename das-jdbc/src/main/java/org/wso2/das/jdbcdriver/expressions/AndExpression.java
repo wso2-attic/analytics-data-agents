@@ -24,25 +24,25 @@ import java.util.Set;
 import java.util.Vector;
 
 /**
- * Class which represents the OR operation of relational expressions
+ * Class which represents the OR operation of relational expressions.
  */
 public class AndExpression extends Expression {
 
-    Vector<Expression> vectorExpressions;
+    private Vector<Expression> vectorExpressions;
 
     public AndExpression(Vector<Expression> vectorExpressions) {
         this.vectorExpressions = vectorExpressions;
     }
 
     /**
-     * Evaluates to true all of the expression is true
+     * Evaluates to true all of the expression is true.
      *
      * @param env record data
      * @return Boolean values which indicates whether the expression is true
      */
     public Boolean isTrue(Map<String, Object> env) {
         Boolean bIsTrue = Boolean.FALSE;
-        for (Expression expr : vectorExpressions) {
+        for (Expression expr : this.vectorExpressions) {
             bIsTrue = expr.isTrue(env);
             if (!bIsTrue) {
                 break;
@@ -53,7 +53,7 @@ public class AndExpression extends Expression {
 
     public List<String> getFilteredColumns(Set<String> availableColumns) {
         List<String> result = new LinkedList<String>();
-        for (Expression expr : vectorExpressions) {
+        for (Expression expr : this.vectorExpressions) {
             result.addAll(expr.getFilteredColumns(availableColumns));
         }
         return result;

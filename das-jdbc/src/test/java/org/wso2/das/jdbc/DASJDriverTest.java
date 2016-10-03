@@ -144,9 +144,7 @@ public class DASJDriverTest {
         try {
             System.out.println("================PREPARED STATEMENT WITH PARAMETERS TEST=============");
             Connection conn = DriverManager.getConnection("jdbc:dasjdriver:" + url, "admin", "admin");
-
             String queryString = "SELECT * FROM OVERUSED_DEVICES WHERE HOUSE_ID = ? AND METRO_AREA = ?";
-
             PreparedStatement prepstmt = conn.prepareStatement(queryString);
             prepstmt.setInt(1, 15);
             prepstmt.setString(2, "San Francisco");
@@ -182,12 +180,10 @@ public class DASJDriverTest {
             System.out.println("================INDEX TEST=============");
             Connection conn = DriverManager.getConnection("jdbc:dasjdriver:" + url, "admin", "admin");
             List<String> stets = ((DASJConnection) conn).getIndexes("OVERUSED_DEVICES");
-
             System.out.println("INDEX Count:" + stets.size());
             for (String s : stets) {
                 System.out.println("INDEX:" + s);
             }
-
             conn.close();
         } catch (Exception e) {
             System.out.println("testIndexKeys: " + e.getMessage());
@@ -208,11 +204,11 @@ public class DASJDriverTest {
             // FROM ORG_WSO2_DAS_SAMPLE_SMART_HOME_DATA where state = 'Florida';");
             //ResultSet rs = stmt.executeQuery("select tbl.HOUSE_ID,tbl.POWER_READING,tbl.DEVICE_ID,tbl.METRO_AREA,
             // tbl.STATE,tbl.VERSION,tbl.IS_PEAK,tbl.TIMESTAMP from \"ORG_WSO2_DAS_SAMPLE_SMART_HOME_DATA\" tbl;");
-            //ResultSet rs = stmt.executeQuery("select * FROM OVERUSED_DEVICES WHERE HOUSE_ID = 15 OR HOUSE_ID=15");
-            ResultSet rs = stmt.executeQuery("select * FROM OVERUSED_DEVICES");
+            ResultSet rs = stmt.executeQuery("select * FROM OVERUSED_DEVICES WHERE HOUSE_ID = 12 AND HOUSE_ID=16");
+            //ResultSet rs = stmt.executeQuery("select * FROM OVERUSED_DEVICES");
             int i = 0;
             while (rs.next()) {
-                i   ++;
+                i++;
                 System.out.println(
                         "ROW:" + i + ":timestamp:" + rs.getString("timestamp") + ":house_id:" + rs.getString("house_id")
                                 + "|state:" + rs.getString("state") + "|metro_area:" + rs.getString("metro_area")
@@ -226,13 +222,14 @@ public class DASJDriverTest {
         }
     }
 
-    @Test public void testSelectWithColumnNamesQuery() {
+    @Test
+    public void testSelectWithColumnNamesQuery() {
         try {
             System.out.println("================SELECT QUERY TEST=============");
             Connection conn = DriverManager.getConnection("jdbc:dasjdriver:" + url, "admin", "admin");
             Statement stmt = conn.createStatement();
-            ResultSet rs = stmt.executeQuery(
-                    "select house_id,state,metro_area,device_id,timestamp FROM OVERUSED_DEVICES");
+            ResultSet rs = stmt
+                    .executeQuery("select house_id,state,metro_area,device_id,timestamp FROM OVERUSED_DEVICES");
             int i = 0;
             while (rs.next()) {
                 i++;
@@ -247,7 +244,8 @@ public class DASJDriverTest {
         }
     }
 
-    @Test public void testSelectQueryWithWhere() {
+    @Test
+    public void testSelectQueryWithWhere() {
         try {
             System.out.println("================SELECT QUERY WITH AND TEST=============");
             Connection conn = DriverManager.getConnection("jdbc:dasjdriver:" + url, "admin", "admin");
@@ -256,9 +254,9 @@ public class DASJDriverTest {
             int i = 0;
             while (rs.next()) {
                 i++;
-                System.out.println("ROW:"+i+":timestamp:"+rs.getString("timestamp")+":house_id:"+
-                        rs.getString("house_id")+"|state:"+rs.getString("state")+"|metro_area:"+
-                        rs.getString("metro_area")+"|device_id:"+rs.getInt("device_id"));
+                System.out.println("ROW:" + i + ":timestamp:" + rs.getString("timestamp") + ":house_id:" +
+                        rs.getString("house_id") + "|state:" + rs.getString("state") + "|metro_area:" +
+                        rs.getString("metro_area") + "|device_id:" + rs.getInt("device_id"));
             }
             conn.close();
         } catch (Exception e) {
@@ -266,7 +264,8 @@ public class DASJDriverTest {
         }
     }
 
-    @Test public void testSelectQueryWithAnd() {
+    @Test
+    public void testSelectQueryWithAnd() {
         try {
             System.out.println("================SELECT QUERY WITH AND TEST=============");
             Connection conn = DriverManager.getConnection("jdbc:dasjdriver:" + url, "admin", "admin");
@@ -287,7 +286,8 @@ public class DASJDriverTest {
         }
     }
 
-    @Test public void testSelectQueryWithOR() {
+    @Test
+    public void testSelectQueryWithOR() {
         try {
             System.out.println("================SELECT QUERY WITH OR TEST=============");
             Connection conn = DriverManager.getConnection("jdbc:dasjdriver:" + url, "admin", "admin");
@@ -308,7 +308,8 @@ public class DASJDriverTest {
         }
     }
 
-    @Test public void testSelectQueryWithNotOperation() {
+    @Test
+    public void testSelectQueryWithNotOperation() {
         try {
             System.out.println("================SELECT QUERY WITH NOTTEST=============");
             Connection conn = DriverManager.getConnection("jdbc:dasjdriver:" + url, "admin", "admin");
@@ -328,118 +329,106 @@ public class DASJDriverTest {
         }
     }
 
-    @Test public void testCountAggregateFunction() throws SQLException {
+    @Test
+    public void testCountAggregateFunction() throws SQLException {
         try {
             System.out.println("================COUNT FUNCTION TEST=============");
             Connection conn = DriverManager.getConnection("jdbc:dasjdriver:" + url, "admin", "admin");
             Statement stmt = conn.createStatement();
-
             ResultSet rs = stmt.executeQuery("select count(*) FROM OVERUSED_DEVICES");
             int i = 0;
             while (rs.next()) {
                 i++;
                 System.out.println("COUINT:" + rs.getInt(1));
             }
-
             conn.close();
         } catch (Exception e) {
             System.out.println("testCountAggregateFunction: " + e.getMessage());
         }
-
     }
 
-    @Test public void testSumAggregateFunction() throws SQLException {
+    @Test
+    public void testSumAggregateFunction() throws SQLException {
         try {
             System.out.println("================SUM FUNCTION TEST=============");
             Connection conn = DriverManager.getConnection("jdbc:dasjdriver:" + url, "admin", "admin");
             Statement stmt = conn.createStatement();
-
             ResultSet rs = stmt.executeQuery("select SUM(DEVICE_ID) FROM OVERUSED_DEVICES");
             while (rs.next()) {
                 System.out.println("SUM:" + rs.getInt(1));
             }
-
             ResultSet rs2 = stmt.executeQuery("select SUM(HOUSE_ID) FROM OVERUSED_DEVICES WHERE POWER_READING > 995");
             int j = 0;
             while (rs2.next()) {
                 j++;
                 System.out.println("SUM:" + rs2.getDouble(1));
             }
-
             conn.close();
         } catch (Exception e) {
             System.out.println("testSumAggregateFunction: " + e.getMessage());
         }
     }
 
-    @Test public void testMinAggregateFunction() {
+    @Test
+    public void testMinAggregateFunction() {
         try {
             System.out.println("================MIN FUNCTION TEST=============");
             Connection conn = DriverManager.getConnection("jdbc:dasjdriver:" + url, "admin", "admin");
             Statement stmt = conn.createStatement();
-
             ResultSet rs = stmt.executeQuery("select MIN(POWER_READING) FROM OVERUSED_DEVICES");
             while (rs.next()) {
                 System.out.println("MIN:" + rs.getDouble(1));
             }
-
             ResultSet rs2 = stmt
                     .executeQuery("select MIN(POWER_READING) FROM OVERUSED_DEVICES WHERE POWER_READING > 995");
             while (rs2.next()) {
                 System.out.println("MIN:" + rs2.getDouble(1));
             }
-
             ResultSet rs3 = stmt.executeQuery("select MIN(DEVICE_ID) FROM OVERUSED_DEVICES");
             while (rs3.next()) {
                 System.out.println("MIN:" + rs3.getInt(1));
             }
-
             ResultSet rs4 = stmt.executeQuery("select MIN(METRO_AREA) FROM OVERUSED_DEVICES");
             while (rs4.next()) {
                 System.out.println("MIN:" + rs4.getString(1));
             }
-
             conn.close();
         } catch (Exception e) {
             System.out.println("testMinAggregateFunction: " + e.getMessage());
         }
     }
 
-    @Test public void testMaxAggregateFunction() {
+    @Test
+    public void testMaxAggregateFunction() {
         try {
             System.out.println("================MAX FUNCTION TEST=============");
             Connection conn = DriverManager.getConnection("jdbc:dasjdriver:" + url, "admin", "admin");
             Statement stmt = conn.createStatement();
-
             ResultSet rs = stmt.executeQuery("select MAX(POWER_READING) FROM OVERUSED_DEVICES");
             while (rs.next()) {
                 System.out.println("MAX:" + rs.getDouble(1));
             }
-
             ResultSet rs2 = stmt
                     .executeQuery("select MAX(POWER_READING) FROM OVERUSED_DEVICES WHERE POWER_READING < 995");
             while (rs2.next()) {
                 System.out.println("MAX:" + rs2.getDouble(1));
             }
-
             ResultSet rs3 = stmt.executeQuery("select MAX(DEVICE_ID) FROM OVERUSED_DEVICES");
             while (rs3.next()) {
                 System.out.println("MAX:" + rs3.getInt(1));
             }
-
             ResultSet rs4 = stmt.executeQuery("select MAX(METRO_AREA) FROM OVERUSED_DEVICES");
             while (rs4.next()) {
                 System.out.println("MAX:" + rs4.getString(1));
             }
-
             conn.close();
         } catch (Exception e) {
             System.out.println("testMaxAggregateFunction: " + e.getMessage());
         }
     }
 
-    @Test public void testDasApi() {
-
+    @Test
+    public void testDasApi() {
         //Checking if a table exists
         //https://localhost:9443/analytics/table_exists?table=OVERUSED_DEVICES
         try {
@@ -449,15 +438,13 @@ public class DASJDriverTest {
             ResultSet rs = dbmd.getTables(null, null, "OVERUSED_DEVICES", null);
             if (rs.next()) {
                 System.out.println("Table Exists:OVERUSED_DEVICES");
-            }
-            else {
+            } else {
                 System.out.println("Table Not Exists:OVERUSED_DEVICES");
             }
             conn.close();
         } catch (Exception e) {
             System.out.println("testDasApi:Table Exists: " + e.getMessage());
         }
-
         //Getting the record count of a table
         //https://localhost:9443/analytics/tables/OVERUSED_DEVICES/recordcount
         try {
@@ -474,7 +461,6 @@ public class DASJDriverTest {
         } catch (Exception e) {
             System.out.println("testDasApi:Record Count: " + e.getMessage());
         }
-
         //Getting the schema of a table
         //https://localhost:9443/analytics/tables/OVERUSED_DEVICES/schema
         try {
@@ -493,6 +479,5 @@ public class DASJDriverTest {
         } catch (Exception e) {
             System.out.println("testColumnMetaData: " + e.getMessage());
         }
-
     }
 }

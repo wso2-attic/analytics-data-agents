@@ -37,21 +37,22 @@ import java.util.List;
  * This provides Comprehensive information about the database as a whole.
  */
 public class DASJDatabaseMetaData implements DatabaseMetaData {
+
     private Connection connection;
     private DASJStatement statement;
 
     public DASJDatabaseMetaData(Connection conn) {
-        connection = conn;
+        this.connection = conn;
     }
 
     @Override
     public String getURL() throws SQLException {
-        return ((DASJConnection) connection).getURL();
+        return ((DASJConnection) this.connection).getURL();
     }
 
     @Override
     public Connection getConnection() throws SQLException {
-        return connection;
+        return this.connection;
     }
 
     @Override
@@ -87,7 +88,7 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     @Override
     public ResultSet getSchemas() throws SQLException {
         Object[] data = new Object[] { ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, null };
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         columnValues.add(data);
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.SCHEMAS,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.SCHEMAS,  columnValues);
@@ -96,10 +97,9 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     @Override
     public ResultSet getTables(String catalog, String schemaPattern, String tableNamePattern, String[] types)
             throws SQLException {
-        List<String> listTables = ((DASJConnection) connection).getTableNames();
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>(listTables.size());
+        List<String> listTables = ((DASJConnection) this.connection).getTableNames();
+        List<Object[]> columnValues = new ArrayList<Object[]>(listTables.size());
         boolean bMatchType = false;
-
         if (types == null) {
             bMatchType = true;
         } else {
@@ -129,15 +129,13 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     @Override
     public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern)
             throws SQLException {
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         System.out.println("DAS Columns:catalog:" + catalog + "|schemaPattern:" + schemaPattern + "|tableNamePattern:"
                 + tableNamePattern + "|columnNamePattern:" + columnNamePattern);
-
-        if (statement == null) {
-            statement = (DASJStatement) connection.createStatement();
+        if (this.statement == null) {
+            this.statement = (DASJStatement) this.connection.createStatement();
         }
         ResultSet resultSetTableList = getTables(catalog, schemaPattern, tableNamePattern, null);
-
         ResultSet resultSetTableData;
         Integer columnSize = Integer.valueOf(Short.MAX_VALUE);
         Integer decimalDigits = Integer.valueOf(Short.MAX_VALUE);
@@ -151,23 +149,18 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
         Integer sqlDateTimeSub = 0;
         String isNullable = "YES";
         String isAutoIncrement = "NO";
-
         while (resultSetTableList.next()) {
             String tableName = resultSetTableList.getString(3);
-            resultSetTableData = statement.executeQuery("SELECT * FROM " + tableName + ";");
+            resultSetTableData = this.statement.executeQuery("SELECT * FROM " + tableName + ";");
             ResultSetMetaData metadata = resultSetTableData.getMetaData();
-
             int columnCount = metadata.getColumnCount();
-
             for (int i = 0; i < columnCount; i++) {
                 String columnName = metadata.getColumnName(i + 1);
-
                 if (columnNamePattern == null || ServiceUtil
                         .isPatternMatched(columnNamePattern, ServiceConstants.DAS_SERVICE_QUERIES.DEFAULT_ESCAPE_STRING,
                                 columnName)) {
                     int columnType = metadata.getColumnType(i + 1);
                     String columnTypeName = metadata.getColumnTypeName(i + 1);
-
                     Object data[] = { tableCat, ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME, tableName,
                             columnName, columnType, columnTypeName, columnSize, buffLength,
                             decimalDigits, radix, nullable, remarks, columnDef, sqlDataType, sqlDateTimeSub, columnSize,
@@ -186,9 +179,8 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     @Override
     public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
         System.out.println("catalog:" + catalog + "|schema:" + schema + "|table:" + table);
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-
-        List<String> primaryKeys = ((DASJConnection) connection).getPrimaryKeys(table);
+        List<Object[]> columnValues = new ArrayList<Object[]>();
+        List<String> primaryKeys = ((DASJConnection) this.connection).getPrimaryKeys(table);
         int iSeq = 0;
         for (String key : primaryKeys) {
             ++iSeq;
@@ -205,16 +197,14 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     @Override
     public ResultSet getIndexInfo(String catalog, String schema, String table, boolean unique, boolean approximate)
             throws SQLException {
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
-        List<String> indexColumns = ((DASJConnection) connection).getIndexes(table);
-
+        List<Object[]> columnValues = new ArrayList<Object[]>();
+        List<String> indexColumns = ((DASJConnection) this.connection).getIndexes(table);
         boolean bNonUnique = false;
         String indexQualifier = null;
         String sAscOrDesc = null;
         int cardinality = 0;
         int pages = 0;
         String filterCondition = null;
-
         int iSeq = 0;
         for (String key : indexColumns) {
             ++iSeq;
@@ -223,18 +213,17 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
                     filterCondition };
             columnValues.add(data);
         }
-
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.INDEXINFO,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.INDEXINFO, columnValues);
     }
 
     /**
-     * Retrieves the table types available in this database
+     * Retrieves the table types available in this database.
      */
     @Override
     public ResultSet getTableTypes() throws SQLException {
         Object[] data = new Object[] { "TABLE" };
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         columnValues.add(data);
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.TABLETYPES,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.TABLETYPES, columnValues);
@@ -242,17 +231,17 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
 
     @Override
     public ResultSet getImportedKeys(String catalog, String schema, String table) throws SQLException {
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.IMPORTEDKEYS,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.IMPORTEDKEYS, columnValues);
     }
 
     /**
-     * Retrieves a description of the foreign key columns that reference the given table's primary key columns
+     * Retrieves a description of the foreign key columns that reference the given table's primary key columns.
      */
     @Override
     public ResultSet getExportedKeys(String catalog, String schema, String table) throws SQLException {
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.EXPORTEDKEYS,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.EXPORTEDKEYS, columnValues);
     }
@@ -263,17 +252,17 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     @Override
     public ResultSet getProcedures(String catalog, String schemaPattern, String procedureNamePattern)
             throws SQLException {
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.PROCEDURES,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.PROCEDURES, columnValues);
     }
 
     /**
-     * Retrieves the catalog names available in this database
+     * Retrieves the catalog names available in this database.
      */
     @Override
     public ResultSet getCatalogs() throws SQLException {
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.CATALOGS,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.CATALOGS,columnValues);
     }
@@ -281,7 +270,7 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     @Override
     public ResultSet getColumnPrivileges(String catalog, String schema, String table,
             String columnNamePattern) throws SQLException {
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.COLUMNPRIVILEGES,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.COLUMNPRIVILEGES, columnValues);
     }
@@ -292,7 +281,7 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     @Override
     public ResultSet getTablePrivileges(String catalog, String schemaPattern, String tableNamePattern)
             throws SQLException {
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.TABLEPRIVILEGES,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.TABLEPRIVILEGES, columnValues);
     }
@@ -300,7 +289,7 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     @Override
     public ResultSet getBestRowIdentifier(String catalog, String schema, String table, int scope,
             boolean nullable) throws SQLException {
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.BESTROWID,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.BESTROWID, columnValues);
     }
@@ -310,7 +299,7 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
      */
     @Override
     public ResultSet getVersionColumns(String catalog, String schema, String table) throws SQLException {
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.VERSIONCOLUMNS,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.VERSIONCOLUMNS, columnValues);
     }
@@ -331,18 +320,18 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     @Override
     public ResultSet getUDTs(String catalog, String schemaPattern, String typeNamePattern, int[] types)
             throws SQLException {
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.UDT,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.UDT, columnValues);
     }
 
     /**
-     * Retrieves a description of the pseudo or hidden columns available in a given table
+     * Retrieves a description of the pseudo or hidden columns available in a given table.
      */
     @Override
     public ResultSet getPseudoColumns(String catalog, String schemaPattern, String tableNamePattern,
             String columnNamePattern) throws SQLException {
-        ArrayList<Object[]> columnValues = new ArrayList<Object[]>();
+        List<Object[]> columnValues = new ArrayList<Object[]>();
         return createResultSet(ServiceConstants.DAS_METADATA_DEF_COLUMN_NAMES.PSEUDOCOLUMNS,
                 ServiceConstants.DAS_METADATA_DEF_COLUMN_TYPES.PSEUDOCOLUMNS, columnValues);
     }
@@ -362,7 +351,7 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
 
     @Override
     public String getUserName() throws SQLException {
-        return ((DASJConnection) connection).getUserName();
+        return ((DASJConnection) this.connection).getUserName();
     }
 
     /**
@@ -1118,15 +1107,14 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     private ResultSet createResultSet(String columnNames, String columnTypes, List<Object[]> columnValues)
             throws SQLException {
         DataReader reader = new DataReader(columnNames.split(","), columnTypes.split(","), columnValues);
-        ArrayList<Object[]> queryEnvironment = new ArrayList<Object[]>();
+        List<Object[]> queryEnvironment = new ArrayList<Object[]>();
         queryEnvironment.add(new Object[] { "*", new AsteriskExpression("*") });
         ResultSet rs;
-
         try {
-            if (statement == null) {
-                statement = (DASJStatement) connection.createStatement();
+            if (this.statement == null) {
+                this.statement = (DASJStatement) this.connection.createStatement();
             }
-            rs = new DASJResultSet(statement, reader, "", queryEnvironment, ResultSet.TYPE_FORWARD_ONLY, -1,
+            rs = new DASJResultSet(this.statement, reader, "", queryEnvironment, ResultSet.TYPE_FORWARD_ONLY, -1,
                     null);
         } catch (ClassNotFoundException e) {
             throw new SQLException(e.getMessage());
@@ -1140,61 +1128,47 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
         Short shortMax = Short.MAX_VALUE;
         Short searchable = DatabaseMetaData.typeSearchable;
         Short nullable = DatabaseMetaData.typeNullable;
-
-        ArrayList<Object[]> retval = new ArrayList<Object[]>();
+        List<Object[]> retval = new ArrayList<Object[]>();
 
         retval.add(new Object[] { "String", Types.VARCHAR, shortMax, "'", "'", null, nullable,
                 Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
                 intZero, intZero, intZero });
-
         retval.add(new Object[] { "Boolean", Types.BOOLEAN, shortMax, null, null, null, nullable,
                 Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
                 intZero, intZero, intZero });
-
         retval.add(new Object[] { "Byte",Types.TINYINT, shortMax, null, null, null, nullable,
                 Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
                 intZero, intZero, intZero });
-
         retval.add(new Object[] { "Short", Types.SMALLINT, shortMax, null, null, null, nullable,
                 Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
                 intZero, intZero, intZero });
-
         retval.add(new Object[] { "Integer", Types.INTEGER, shortMax, null, null, null, nullable,
                 Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
                 intZero, intZero, intZero });
-
         retval.add(new Object[] { "Long", Types.BIGINT, shortMax, null, null, null, nullable,
                 Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
                 intZero, intZero, intZero });
-
         retval.add(new Object[] { "Float", Types.FLOAT, shortMax, null, null, null, nullable,
                 Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
                 intZero, intZero, intZero });
-
         retval.add(new Object[] { "Double", Types.DOUBLE, shortMax, null, null, null, nullable,
                 Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
                 intZero, intZero, intZero });
-
         retval.add(new Object[] { "BigDecimal", Types.DECIMAL, shortMax, null, null, null, nullable,
                 Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
                 intZero, intZero, intZero });
-
         retval.add(new Object[] { "Date", Types.DATE, shortMax, "'", "'", null, nullable, Boolean.TRUE,
                 searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax, intZero, intZero,
                 intZero });
-
         retval.add(new Object[] { "Time", Types.TIME, shortMax, "'", "'", null, nullable, Boolean.TRUE,
                 searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax, intZero, intZero,
                 intZero });
-
         retval.add(new Object[] { "Timestamp", Types.TIMESTAMP, shortMax, null, null, null, nullable,
                 Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
                 intZero, intZero, intZero });
-
         retval.add(new Object[] { "Asciistream", Types.CLOB, shortMax, null, null, null, nullable,
                 Boolean.TRUE, searchable, Boolean.FALSE, Boolean.FALSE, Boolean.FALSE, null, shortZero, shortMax,
                 intZero, intZero, intZero });
-
         return retval;
     }
 }

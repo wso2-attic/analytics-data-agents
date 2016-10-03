@@ -25,27 +25,28 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Class which implements the SQL MIN Aggregation function
+ * Class which implements the SQL MIN Aggregation function.
  */
 public class MinAggrFunciton extends AggregateFunction {
 
-    Expression expression;
-    Object minValue = null;
+    private Expression expression;
+    private Object minValue = null;
 
     public MinAggrFunciton(Expression expression) {
         this.expression = expression;
     }
 
     /**
-     * Evaluate each row against the function
+     * Evaluate each row against the function.
+     *
      * @param env RecordEnvironment which contains the data
      */
-    @Override public void processRow(Map<String, Object> env) {
-
-        Object o = expression.eval(env);
+    @Override
+    public void processRow(Map<String, Object> env) {
+        Object o = this.expression.eval(env);
         if (o != null) {
-            if (minValue == null || ((Comparable) minValue).compareTo(o) > 0) {
-                minValue = o;
+            if (this.minValue == null || ((Comparable) this.minValue).compareTo(o) > 0) {
+                this.minValue = o;
             }
         }
     }
@@ -56,9 +57,10 @@ public class MinAggrFunciton extends AggregateFunction {
 
     /**
      * Get the evaluated result of the function with the given data.
+     *
      * @param env - RecordEnvironment which contains the details of the record
      */
     public Object eval(Map<String, Object> env) {
-        return minValue;
+        return this.minValue;
     }
 }

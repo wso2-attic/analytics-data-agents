@@ -45,20 +45,23 @@ import java.util.List;
 import java.util.Vector;
 
 /**
- * This class have the functions required for parsing the SQL. ZQL Sql parser is
- * used for this.
+ * This class have the functions required for parsing the SQL. ZQL Sql parser is used for this.
  */
 public class SQLParser {
 
-    ArrayList<Object[]> queryEnvironment = new ArrayList<Object[]>();
-    Expression whereExpression;
-    String sTableName;
+    private List<Object[]> queryEnvironment = new ArrayList<Object[]>();
+    private Expression whereExpression;
+    private String sTableName;
+    private String sql;
+
+    public SQLParser(String sql) {
+        this.sql = sql;
+    }
 
     /**
-     * Parse the SQL Query String by using the ZQL parser
-     * @param sql SQL Query string
+     * Parse the SQL Query String by using the ZQL parser.
      */
-    public void parse(String sql) throws SQLException {
+    public void parse() throws SQLException {
         System.out.println("SQL:" + sql);
         if (sql.length() > 0) {
             if (sql.charAt(sql.length() - 1) != ';') {
@@ -71,7 +74,7 @@ public class SQLParser {
         try {
             st = p.readStatement();
         } catch (ParseException e) {
-            e.printStackTrace();
+            throw new SQLException("Error in Parsing SQL:",e);
         }
         if (st != null) {
             if (st instanceof ZQuery) {
@@ -79,27 +82,22 @@ public class SQLParser {
                 Vector sel = q.getSelect(); // SELECT part of the query
                 Vector from = q.getFrom();  // FROM part of the query
                 ZExpression where = (ZExpression) q.getWhere();  // WHERE part of the query
-
                 if (where != null) {
-                    whereExpression = getWhereClauseExpression(where);
+                    this.whereExpression = getWhereClauseExpression(where);
                 }
-
                 if (from.size() > 1) {
                     throw new SQLException("Joins are not supported");
                 }
-
                 // Retrieve the table name in the FROM clause
                 ZFromItem table = (ZFromItem) from.elementAt(0);
-                sTableName = table.getTable();
-
+                this.sTableName = table.getTable();
                 if (sel.size() == 0) {
-                    queryEnvironment.add(new Object[] { "*", new AsteriskExpression("*") });
+                    this.queryEnvironment.add(new Object[] { "*", new AsteriskExpression("*") });
                 } else {
                     for (int i = 0; i < sel.size(); i++) {
                         ZSelectItem item = (ZSelectItem) sel.elementAt(i);
                         String columnName = item.getColumn();
                         String aggragateName = item.getAggregate();
-
                         if (aggragateName != null) {
                             Expression funcExpression;
                             if (columnName.equals("*")) {
@@ -109,10 +107,10 @@ public class SQLParser {
                             }
                             Expression aggregateExpression = getAggregateFunctionExpression(aggragateName,
                                     funcExpression);
-                            queryEnvironment.add(new Object[] { columnName, aggregateExpression });
+                            this.queryEnvironment.add(new Object[] { columnName, aggregateExpression });
                         } else {
                             if (columnName.equals("*")) {
-                                queryEnvironment
+                                this.queryEnvironment
                                         .add(new Object[] { columnName, new AsteriskExpression(columnName) });
                             } else {
                                 if (columnName
@@ -120,13 +118,13 @@ public class SQLParser {
                                     columnName = columnName.substring(
                                             ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME.length() + 1);
                                 }
-                                if (columnName.startsWith(sTableName + ".")) {
-                                    columnName = columnName.substring(sTableName.length() + 1);
+                                if (columnName.startsWith(this.sTableName + ".")) {
+                                    columnName = columnName.substring(this.sTableName.length() + 1);
                                 }
                                 if (columnName.contains(".")) {
                                     columnName = columnName.split("\\.")[1];
                                 }
-                                queryEnvironment.add(new Object[] { columnName,
+                                this.queryEnvironment.add(new Object[] { columnName,
                                         new GeneralExpression(columnName, new ColumnName(columnName)) });
                             }
                         }
@@ -137,19 +135,20 @@ public class SQLParser {
     }
 
     public List<Object[]> getQueryEnvironment() {
-        return queryEnvironment;
+        return this.queryEnvironment;
     }
 
     public String getTableName() {
-        return sTableName;
+        return this.sTableName;
     }
 
     public Expression getWhereExpression() {
-        return whereExpression;
+        return this.whereExpression;
     }
 
     /**
-     * Get the Aggregate Funtion from the ZQL expression
+     * Get the Aggregate Funtion from the ZQL expression.
+     *
      * @param aggregateFuncName  Name of the Aggreate Function -COUNT|MIN|MAX|SUM
      * @param internalExpression ZQL expression which contains the aggragate function
      */
@@ -168,7 +167,8 @@ public class SQLParser {
     }
 
     /**
-     * Get the where clause from the given ZQL expression
+     * Get the where clause from the given ZQL expression.
+     *
      * @param where ZQL Expression which contains the where clause
      */
     private Expression getWhereClauseExpression(ZExpression where) {
@@ -197,7 +197,8 @@ public class SQLParser {
     }
 
     /**
-     * Construct the Relation Operation Expression
+     * Construct the Relation Operation Expression.
+     *
      * @param zExp ZQL expression which represents a relation operation
      */
     private RelationOpExpression getRelationOpExpression(ZExpression zExp) {

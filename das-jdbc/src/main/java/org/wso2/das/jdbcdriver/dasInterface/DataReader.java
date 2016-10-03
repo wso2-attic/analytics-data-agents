@@ -26,23 +26,24 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Helper class which supports the data reading operations
+ * Helper class which supports the data reading operations.
  */
 public class DataReader {
+
     private String[] columnNames;
     private String[] columnTypes;
     private List<Object[]> columnValues;
     private int rowIndex;
 
     public DataReader() {
-        rowIndex = -1;
+        this.rowIndex = -1;
     }
 
     public DataReader(String[] columnNames, String[] columnTypes, List<Object[]> columnValues) {
         this.columnNames = columnNames;
         this.columnTypes = columnTypes;
         this.columnValues = columnValues;
-        rowIndex = -1;
+        this.rowIndex = -1;
     }
 
     public void setColumnNames(String[] columnNames) {
@@ -58,36 +59,37 @@ public class DataReader {
     }
 
     public boolean next() throws SQLException {
-        rowIndex++;
-        return (rowIndex < columnValues.size());
+        this.rowIndex++;
+        return (this.rowIndex < this.columnValues.size());
     }
 
     public String[] getColumnNames() throws SQLException {
-        return columnNames;
+        return this.columnNames;
     }
 
     public void close() throws SQLException {
     }
 
     /**
-     * Get the data of the current record
+     * Get the data of the current record.
+     *
      * @throws SQLException
      */
     public Map<String, Object> getEnvironment() throws SQLException {
         HashMap<String, Object> retval = new HashMap<String, Object>();
-        Object[] o = columnValues.get(rowIndex);
-        for (int i = 0; i < columnNames.length; i++) {
-            retval.put(columnNames[i], o[i]);
+        Object[] o = this.columnValues.get(this.rowIndex);
+        for (int i = 0; i < this.columnNames.length; i++) {
+            retval.put(this.columnNames[i], o[i]);
         }
         return retval;
     }
 
     public String[] getColumnTypes() throws SQLException {
-        return columnTypes;
+        return this.columnTypes;
     }
 
     public int[] getColumnSizes() throws SQLException {
-        int[] columnSizes = new int[columnTypes.length];
+        int[] columnSizes = new int[this.columnTypes.length];
         Arrays.fill(columnSizes, ServiceConstants.DAS_DRIVER_SETTINGS.DEFAULT_COLUMN_SIZE);
         return columnSizes;
     }

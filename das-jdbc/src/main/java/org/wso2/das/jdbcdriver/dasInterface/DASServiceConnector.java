@@ -23,12 +23,13 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 /**
- * Class which creates the Http Url Connection with the DAS instance
+ * Class which creates the Http Url Connection with the DAS instance.
  */
 public class DASServiceConnector {
 
     /**
-     * Sends HTTP GET request to DAS Backend rest API
+     * Sends HTTP GET request to DAS Backend rest API.
+     *
      * @param url  Connectio URL of the DAS API
      * @param user User name for the DAS Service
      * @param pass Password for the DAS service
@@ -38,22 +39,17 @@ public class DASServiceConnector {
         System.out.println("REQUEST:" + url);
         URL obj = new URL(url);
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-
         // optional default is GET
         con.setRequestMethod("GET");
-
         //add authorization header
         String userPassword = user + ":" + pass;
         String encoding = new sun.misc.BASE64Encoder().encode(userPassword.getBytes());
         con.setRequestProperty("Authorization", "Basic " + encoding);
-
         int responseCode = con.getResponseCode();
         System.out.println("DAS Service Response Code:" + responseCode);
-
         BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
         String inputLine;
         StringBuilder response = new StringBuilder();
-
         while ((inputLine = in.readLine()) != null) {
             response.append(inputLine);
         }

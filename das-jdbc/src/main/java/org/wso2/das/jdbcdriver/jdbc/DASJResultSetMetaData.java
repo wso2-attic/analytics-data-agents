@@ -27,7 +27,7 @@ import java.util.Map;
 
 /**
  * Class which implements the java.sql.ResultSetMetaData class.
- * This is used to get information about the types and properties of the columns in a ResultSet object
+ * This is used to get information about the types and properties of the columns in a ResultSet object,
  */
 public class DASJResultSetMetaData implements ResultSetMetaData {
 
@@ -68,7 +68,7 @@ public class DASJResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public int getColumnCount() throws SQLException {
-        return columnTypes.length;
+        return this.columnTypes.length;
     }
 
     @Override
@@ -103,17 +103,17 @@ public class DASJResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public int getColumnDisplaySize(int column) throws SQLException {
-        return columnDisplaySizes[column - 1];
+        return this.columnDisplaySizes[column - 1];
     }
 
     @Override
     public String getColumnLabel(int column) throws SQLException {
-        return columnLabels[column - 1];
+        return this.columnLabels[column - 1];
     }
 
     @Override
     public String getColumnName(int column) throws SQLException {
-        return columnNames[column - 1];
+        return this.columnNames[column - 1];
     }
 
     @Override
@@ -133,7 +133,7 @@ public class DASJResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getTableName(int column) throws SQLException {
-        return tableName;
+        return this.tableName;
     }
 
     @Override
@@ -149,7 +149,7 @@ public class DASJResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getColumnTypeName(int column) throws SQLException {
-        return columnTypes[column - 1];
+        return this.columnTypes[column - 1];
     }
 
     @Override
@@ -169,7 +169,7 @@ public class DASJResultSetMetaData implements ResultSetMetaData {
 
     @Override
     public String getColumnClassName(int column) throws SQLException {
-        return columnTypes[column - 1];
+        return this.columnTypes[column - 1];
     }
 
     @Override

@@ -23,27 +23,27 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Expression which represents the Column
+ * Expression which represents the Column.
  */
 public class ColumnName extends Expression {
 
-    String columnName;
+    private String columnName;
 
     public ColumnName(String columnName) {
         this.columnName = columnName.toUpperCase();
     }
 
     public Object eval(Map<String, Object> env) {
-        return env.get(columnName);
+        return env.get(this.columnName);
     }
 
     public String toString() {
-        return "[" + columnName + "]";
+        return "[" + this.columnName + "]";
     }
 
     public List<String> getFilteredColumns(Set<String> availableColumns) {
         List<String> result = new LinkedList<String>();
-        result.add(columnName);
+        result.add(this.columnName);
         return result;
     }
 }

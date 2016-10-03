@@ -21,45 +21,49 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * Represents the Relational Operation and methods to evaluate relational operations
+ * Represents the Relational Operation and methods to evaluate relational operations.
  */
 public class RelationOpExpression extends Expression {
 
-    String op;
-    Expression left, right;
+    private String operation;
+    private Expression left, right;
+    private static Logger logger = Logger.getLogger(RelationOpExpression.class.getName());
 
     public RelationOpExpression(String op, Expression left, Expression right) {
-        this.op = op;
+        this.operation = op;
         this.left = left;
         this.right = right;
     }
 
     /**
-     * Evalutate whether the Relational operation is true for a given record
+     * Evalutate whether the Relational operation is true for a given record.
+     *
      * @param env - Record details
      * @return Boolean value indicating evaluation result
      */
     public Boolean isTrue(Map<String, Object> env) {
         Boolean result = null;
-        Comparable leftValue = (Comparable) left.eval(env);
-        Comparable rightValue = (Comparable) right.eval(env);
+        Comparable leftValue = (Comparable) this.left.eval(env);
+        Comparable rightValue = (Comparable) this.right.eval(env);
         Integer leftComparedToRightObj = compare(leftValue, rightValue);
         if (leftComparedToRightObj != null) {
             int leftComparedToRight = leftComparedToRightObj;
             if (leftValue != null && rightValue != null) {
-                if (op.equals("=")) {
+                if (this.operation.equals("=")) {
                     result = leftComparedToRight == 0;
-                } else if (op.equals("<>") || op.equals("!=")) {
+                } else if (this.operation.equals("<>") || this.operation.equals("!=")) {
                     result = leftComparedToRight != 0;
-                } else if (op.equals(">")) {
+                } else if (this.operation.equals(">")) {
                     result = leftComparedToRight > 0;
-                } else if (op.equals("<")) {
+                } else if (this.operation.equals("<")) {
                     result = leftComparedToRight < 0;
-                } else if (op.equals("<=") || op.equals("=<")) {
+                } else if (this.operation.equals("<=") || this.operation.equals("=<")) {
                     result = leftComparedToRight <= 0;
-                } else if (op.equals(">=") || op.equals("=>")) {
+                } else if (this.operation.equals(">=") || this.operation.equals("=>")) {
                     result = leftComparedToRight >= 0;
                 }
             }
@@ -77,7 +81,6 @@ public class RelationOpExpression extends Expression {
             } else if (leftValue instanceof Boolean) {
                 Boolean leftBoolean = (Boolean) leftValue;
                 Boolean rightBoolean = Boolean.valueOf(rightValue.toString());
-
                 if (leftBoolean.equals(rightBoolean))
                 {
                     leftComparedToRightObj = 0;
@@ -91,19 +94,18 @@ public class RelationOpExpression extends Expression {
                 Double rightDouble = Double.parseDouble(rightValue.toString());
                 leftComparedToRightObj = leftDouble.compareTo(rightDouble);
             }
-
         } catch (ClassCastException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error in compare:", e);
         } catch (NumberFormatException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error in compare:", e);
         }
         return leftComparedToRightObj;
     }
 
     public List<String> getFilteredColumns(Set<String> availableColumns) {
         List<String> result = new LinkedList<String>();
-        result.addAll(left.getFilteredColumns(availableColumns));
-        result.addAll(right.getFilteredColumns(availableColumns));
+        result.addAll(this.left.getFilteredColumns(availableColumns));
+        result.addAll(this.right.getFilteredColumns(availableColumns));
         return result;
     }
 }

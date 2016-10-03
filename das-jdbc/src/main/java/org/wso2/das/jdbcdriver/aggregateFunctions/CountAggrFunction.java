@@ -26,28 +26,30 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Class which implements the SQL Count Aggregation function
+ * Class which implements the SQL Count Aggregation function.
  */
 public class CountAggrFunction extends AggregateFunction {
-    Expression expression;
-    int counter = 0;
+
+    private Expression expression;
+    private int counter = 0;
 
     public CountAggrFunction(Expression expression) {
         this.expression = expression;
     }
 
     /**
-     * Evaluate each row against the function
+     * Evaluate each row against the function.
+     *
      * @param env RecordEnvironment which contains the data
      */
     @Override
     public void processRow(Map<String, Object> env) {
-        if (expression instanceof AsteriskExpression) {
-            counter++;
+        if (this.expression instanceof AsteriskExpression) {
+            this.counter++;
         } else {
-            Object o = expression.eval(env);
+            Object o = this.expression.eval(env);
             if (o != null) {
-                counter++;
+                this.counter++;
             }
         }
     }
@@ -58,9 +60,10 @@ public class CountAggrFunction extends AggregateFunction {
 
     /**
      * Get the evaluated result of the function with the given data.
+     *
      * @param env - RecordEnvironment which contains the details of the record
      */
     public Object eval(Map<String, Object> env) {
-        return counter;
+        return this.counter;
     }
 }

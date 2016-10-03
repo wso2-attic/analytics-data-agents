@@ -21,7 +21,7 @@ import org.wso2.das.jdbcdriver.expressions.Expression;
 import java.util.Map;
 
 /**
- * Base Class which is used in common for all Aggregate Functions
+ * Base Class which is used in common for all Aggregate Functions.
  */
 public abstract class AggregateFunction extends Expression {
 

@@ -28,14 +28,19 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * JSON helper functions to decode the DAS Service responses
+ * JSON helper functions to decode the DAS Service responses.
  */
 public class JSONUtil {
 
+    private static Logger logger = Logger.getLogger(JSONUtil.class.getName());
+
     /**
-     * Decode the given json array and returns a list of Strings
+     * Decode the given json array and returns a list of Strings.
+     *
      * @param sInput JSon String with array
      * @return Array of string decoded from the json array.
      */
@@ -50,13 +55,14 @@ public class JSONUtil {
                 listValues.add(s);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error in Parse simple array:", e);
         }
         return listValues;
     }
 
     /**
-     * Decode a JSON array which contains sub arrays
+     * Decode a JSON array which contains sub arrays.
+     *
      * @param sInput     JSON input with sub arrays
      * @param lOneHeader Tag name of the external array
      * @param lTwoHeader Tag name of the internal array
@@ -75,7 +81,7 @@ public class JSONUtil {
                 mapReturn.put(sKey, sValue);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error in Parse sub array with L2 Header:", e);
         }
         return mapReturn;
     }
@@ -99,13 +105,14 @@ public class JSONUtil {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error in Parse sub array with check Value:", e);
         }
         return listReturn;
     }
 
     /**
-     * Find a json sub array with a given key
+     * Find a json sub array with a given key.
+     *
      * @param sInput     JSON String with sub arrays
      * @param lOneHeader Sub array with the key
      */
@@ -121,44 +128,37 @@ public class JSONUtil {
                 listReturn.add(subValue);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error in Parse sub array with L1 Header:", e);
         }
         return listReturn;
     }
 
     /**
      * Decode the JSON Data Array retrieved from the DAS backend.
+     *
      * @param sInput       JSON String which contains the DAS response.
      * @param colDataTypes Data types of the each column
      */
     public static DataReader parseDataArray(String sInput, HashMap<String, String> colDataTypes) {
         JSONParser parser = new JSONParser();
-
         DataReader dataReader = new DataReader();
-
         try {
             Object obj = parser.parse(sInput);
             JSONArray arr = (JSONArray) obj;
-
-            ArrayList<Object[]> columnValues = new ArrayList<Object[]>(arr.size());
+            List<Object[]> columnValues = new ArrayList<Object[]>(arr.size());
             List<String> listColumnNames = new ArrayList<String>();
             List<String> listColumnDataTypes = new ArrayList<String>();
-
             //The data type of the Column "_version" is not present in the schema query.
             colDataTypes.put(ServiceConstants.DAS_RESPONSE_DATA.ROW_VERSION,
                     ServiceConstants.DATATYPES.DATATYPE_STRING);
-
             for (int i = 0; i < arr.size(); i++) {
                 JSONObject dataObj = (JSONObject) arr.get(i);
                 long lTime = (Long) dataObj.get(ServiceConstants.DAS_RESPONSE_DATA.ROW_TIMESTAMP);
                 JSONObject rowValObj = (JSONObject) dataObj.get(ServiceConstants.DAS_RESPONSE_DATA.RESPONSE_TAG_VALUES);
-
                 Object[] dataRow = new Object[rowValObj.size() + 1];//ONE is added to store the timestamp
                 int j = 0;
-
                 for (Map.Entry entry : (Set<Map.Entry>) rowValObj.entrySet()) {
                     String sKey = (String) entry.getKey();
-
                     //Get the column names in the order appear in the "values" object.
                     // Extract this info only for the first row.
                     if (i == 0) {
@@ -168,7 +168,6 @@ public class JSONUtil {
                         listColumnNames.add(sKey.toUpperCase());
                         listColumnDataTypes.add(colDataTypes.get(sKey));
                     }
-
                     Object columnVal = entry.getValue();
                     dataRow[j] = columnVal;
                     j++;
@@ -177,18 +176,15 @@ public class JSONUtil {
                 dataRow[j] = lTime;
                 columnValues.add(dataRow);
             }
-
             if (!listColumnNames.isEmpty()) {
                 listColumnNames.add(ServiceConstants.DAS_RESPONSE_DATA.ROW_TIMESTAMP.toUpperCase());
                 listColumnDataTypes.add(ServiceConstants.DATATYPES.DATATYPE_LONG);
             }
-
             dataReader.setColumnTypes(listColumnDataTypes.toArray(new String[listColumnDataTypes.size()]));
             dataReader.setColumnNames(listColumnNames.toArray(new String[listColumnDataTypes.size()]));
             dataReader.setColumnValues(columnValues);
-
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error in Parse Data array:", e);
         }
         return dataReader;
     }

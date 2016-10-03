@@ -24,35 +24,38 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
- * Class which implements the SQL SUM Aggregation function
+ * Class which implements the SQL SUM Aggregation function.
  */
 public class SumAggrFunction extends AggregateFunction {
 
-    Expression expression;
-    BigDecimal sum = null;
+    private Expression expression;
+    private BigDecimal sum = null;
+    private static Logger logger = Logger.getLogger(SumAggrFunction.class.getName());
 
     public SumAggrFunction(Expression expression) {
         this.expression = expression;
     }
 
     /**
-     * Evaluate each row against the function
+     * Evaluate each row against the function.
+     *
      * @param env RecordEnvironment which contains the data
      */
     @Override public void processRow(Map<String, Object> env) {
-
-        Object o = expression.eval(env);
+        Object o = this.expression.eval(env);
         if (o != null) {
             try {
-                if (sum == null) {
-                    sum = new BigDecimal(o.toString());
+                if (this.sum == null) {
+                    this.sum = new BigDecimal(o.toString());
                 } else {
-                    sum = sum.add(new BigDecimal(o.toString()));
+                    this.sum = this.sum.add(new BigDecimal(o.toString()));
                 }
             } catch (NumberFormatException e) {
-                e.printStackTrace();
+                logger.log(Level.SEVERE, "Error in Process Sum:", e);
             }
         }
     }
@@ -63,18 +66,18 @@ public class SumAggrFunction extends AggregateFunction {
 
     /**
      * Get the evaluated result of the function with the given data.
+     *
      * @param env - RecordEnvironment which contains the details of the record
      */
     public Object eval(Map<String, Object> env) {
         Object retval = null;
         try {
-            if (sum != null) {
-                retval = sum.longValueExact();
+            if (this.sum != null) {
+                retval = this.sum.longValueExact();
             }
         } catch (ArithmeticException e) {
-            retval = sum.doubleValue();
+            retval = this.sum.doubleValue();
         }
-
         return retval;
     }
 }

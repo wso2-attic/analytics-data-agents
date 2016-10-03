@@ -30,8 +30,10 @@ import java.util.regex.Pattern;
  * This class have a collection of Utility functions required by the Driver classes.
  */
 public class ServiceUtil {
+
     /**
-     * Get a object of the given sql data type
+     * Get a object of the given sql data type.
+     *
      * @param sqlTypeName Sql Type input
      */
     public static Object getLiteral(String sqlTypeName) {
@@ -70,6 +72,7 @@ public class ServiceUtil {
 
     /**
      * Get SQL data type of a given object.
+     *
      * @param literal Object which need to get the sql type
      */
     public static String getSQLType(Object literal) {
@@ -142,7 +145,6 @@ public class ServiceUtil {
                     isEscaped = false;
                 }
             }
-
             Pattern pattern = Pattern.compile(regex.toString());
             retval = pattern.matcher(input).matches();
         }
@@ -150,7 +152,7 @@ public class ServiceUtil {
     }
 
     /**
-     * Get the byte array of a given string
+     * Get the byte array of a given string.
      *
      * @param str Input string which needs to convert to byte[]
      */
@@ -169,7 +171,8 @@ public class ServiceUtil {
     }
 
     /**
-     * Get Ascii Stream of a given string
+     * Get Ascii Stream of a given string.
+     *
      * @param str Input string wich needs to convert to Ascii Stream
      */
     public static InputStream getAsciiStream(String str) {
@@ -181,7 +184,8 @@ public class ServiceUtil {
     }
 
     /**
-     * Remove the inverted commas of the table name if exists
+     * Remove the inverted commas of the table name if exists.
+     *
      * @param tableName - Name of the table before removing inverted comma characters
      */
     public static String extractTableName(String tableName){

@@ -50,13 +50,14 @@ public class DASJStatement implements Statement {
     }
 
     protected void checkStatus() throws SQLException {
-        if (connectionClosed) {
+        if (this.connectionClosed) {
             throw new SQLException("[Closed Statement]: Driver.getParentLogger()");
         }
     }
 
     /**
      * Executes the given SQL statement, which returns a single ResultSet object.
+     *
      * @param sql SQL Statement for execution
      * @return  Resultset object which contains the result for the query
      * @throws SQLException
@@ -64,61 +65,59 @@ public class DASJStatement implements Statement {
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
         checkStatus();
-        if (prevResultSet != null) {
-            prevResultSet.close();
+        if (this.prevResultSet != null) {
+            this.prevResultSet.close();
         }
-        prevResultSet = null;
-
+        this.prevResultSet = null;
         //Parse the SQL
-        SQLParser sqlParser = new SQLParser();
+        SQLParser sqlParser = new SQLParser(sql);
         try {
-            sqlParser.parse(sql);
+            sqlParser.parse();
         } catch (Exception e) {
             throw new SQLException("SyntaxError:executeQuery" + sql + "|" + e.getMessage());
         }
-
         ResultSet rs = executeDASQuery(sqlParser);
-        prevResultSet = rs;
+        this.prevResultSet = rs;
         return rs;
     }
 
     @Override
     public void close() throws SQLException {
-        if (prevResultSet != null) {
-            prevResultSet.close();
+        if (this.prevResultSet != null) {
+            this.prevResultSet.close();
         }
-        prevResultSet = null;
-        connectionClosed = true;
-        connection.removeStatement(this);
+        this.prevResultSet = null;
+        this.connectionClosed = true;
+        this.connection.removeStatement(this);
     }
 
     @Override
     public int getMaxRows() throws SQLException {
         checkStatus();
-        return maxRows;
+        return this.maxRows;
     }
 
     @Override
     public void setMaxRows(int max) throws SQLException {
         checkStatus();
-        maxRows = max;
+        this.maxRows = max;
     }
 
     @Override
     public int getQueryTimeout() throws SQLException {
         checkStatus();
-        return queryTimeout;
+        return this.queryTimeout;
     }
 
     @Override
     public void setQueryTimeout(int seconds) throws SQLException {
         checkStatus();
-        queryTimeout = seconds;
+        this.queryTimeout = seconds;
     }
 
     @Override
     public ResultSet getResultSet() throws SQLException {
-        return prevResultSet;
+        return this.prevResultSet;
     }
 
     @Override
@@ -136,12 +135,12 @@ public class DASJStatement implements Statement {
     @Override
     public Connection getConnection() throws SQLException {
         checkStatus();
-        return connection;
+        return this.connection;
     }
 
     @Override
     public boolean isClosed() throws SQLException {
-        return connectionClosed;
+        return this.connectionClosed;
     }
 
     @Override
@@ -203,18 +202,18 @@ public class DASJStatement implements Statement {
     @Override
     public boolean execute(String sql) throws SQLException {
         checkStatus();
-        if (prevResultSet != null) {
-            prevResultSet.close();
+        if (this.prevResultSet != null) {
+            this.prevResultSet.close();
         }
-        prevResultSet = null;
+        this.prevResultSet = null;
 
         //Parse the SQL
         ResultSet rs;
-        SQLParser sqlParser = new SQLParser();
+        SQLParser sqlParser = new SQLParser(sql);
         try {
-            sqlParser.parse(sql);
+            sqlParser.parse();
             rs = executeDASQuery(sqlParser);
-            prevResultSet = rs;
+            this.prevResultSet = rs;
         } catch (Exception e) {
             throw new SQLException("SQLExecution Error:executeQuery" + sql + "|" + e.getMessage());
         }
@@ -339,7 +338,7 @@ public class DASJStatement implements Statement {
     }
 
     /**
-     * Send the query to the DAS Backend and generate the result set
+     * Send the query to the DAS Backend and generate the result set.
      */
     protected ResultSet executeDASQuery(SQLParser sqlParser) throws SQLException {
         HashMap<String, String> mapColumnDataTypes = this.connection.getColumnDataTypes(sqlParser.getTableName());
@@ -349,7 +348,7 @@ public class DASJStatement implements Statement {
     }
 
     /**
-     * Create the result set by using the retrieved data from the DAS backend
+     * Create the result set by using the retrieved data from the DAS backend.
      */
     private ResultSet createResultSet(DataReader reader, SQLParser sqlParser) throws SQLException {
         ResultSet rs;

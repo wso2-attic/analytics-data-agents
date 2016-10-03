@@ -77,11 +77,12 @@ public class DASJResultSet implements ResultSet {
 
     private List<AggregateFunction> aggregateFunctions;
 
-    private ArrayList<Map<String, Object>> bufferedRecordEnvironments = null;
+    private List<Map<String, Object>> bufferedRecordEnvironments = null;
 
 
     /**
-     * Constructor for the DAS Result Set object
+     * Constructor for the DAS Result Set object.
+     *
      * @param statement Statement that produced this ResultSet
      * @param reader Helper class that performs the actual file reads
      * @param tableName Table referenced by the Statement
@@ -99,21 +100,17 @@ public class DASJResultSet implements ResultSet {
         this.limit = sqlLimit;
         this.resultSetType = resultSetType;
         this.whereClause = whereClause;
-
         this.aggregateFunctions = new ArrayList<AggregateFunction>();
         this.maxRows = statement.getMaxRows();
         this.fetchSize = statement.getFetchSize();
         this.fetchDirection = statement.getFetchDirection();
-
         String[] columnNames = reader.getColumnNames();
-        HashSet<String> allColumns = new HashSet<String>(Arrays.asList(columnNames));
-
-        if (whereClause != null) {
-            this.filterColumns = new LinkedList<String>(whereClause.getFilteredColumns(allColumns));
+        Set<String> allColumns = new HashSet<String>(Arrays.asList(columnNames));
+        if (this.whereClause != null) {
+            this.filterColumns = new LinkedList<String>(this.whereClause.getFilteredColumns(allColumns));
         } else {
             this.filterColumns = new LinkedList<String>();
         }
-
         //Replace any "select *" with the list of column names in that table.
         for (int i = 0; i < this.queryEnvironment.size(); i++) {
             Object[] o = this.queryEnvironment.get(i);
@@ -135,33 +132,31 @@ public class DASJResultSet implements ResultSet {
                 }
             }
         }
-
         //Validate query - Check whether there is column names with the aggregate functions
-        if (aggregateFunctions.size() > 0) {
+        if (this.aggregateFunctions.size() > 0) {
             List<String> allColumnnsinQuery = new LinkedList<String>();
             for(Object[] o : this.queryEnvironment) {
                 if (o[1] != null) {
                     allColumnnsinQuery.addAll(((Expression) o[1]).getFilteredColumns(allColumns));
                 }
             }
-            if (allColumnnsinQuery.size() > 0 && aggregateFunctions.size() > 0) {
+            if (allColumnnsinQuery.size() > 0 && this.aggregateFunctions.size() > 0) {
                 throw new SQLException("INVALID QUERY: Columns with Aggregate functions");
             }
         }
-
         //Calculate the Aggregate functions on the data set
         if (this.aggregateFunctions.size() > 0) {
-            bufferedRecordEnvironments = new ArrayList<Map<String, Object>>();
-            currentRow = 0;
+            this.bufferedRecordEnvironments = new ArrayList<Map<String, Object>>();
+            this.currentRow = 0;
 
             while (next()) {
                 for (Object o : this.aggregateFunctions) {
                     AggregateFunction func = (AggregateFunction) o;
-                    func.processRow(recordEnvironment);
+                    func.processRow(this.recordEnvironment);
                 }
             }
-            bufferedRecordEnvironments.add(new HashMap<String, Object>());
-            currentRow = 0;
+            this.bufferedRecordEnvironments.add(new HashMap<String, Object>());
+            this.currentRow = 0;
         }
     }
 
@@ -171,52 +166,51 @@ public class DASJResultSet implements ResultSet {
     @Override
     public boolean next() throws SQLException {
         boolean hasNext;
-        if (this.aggregateFunctions.size() > 0 && currentRow < bufferedRecordEnvironments.size()) {
-            currentRow++;
-            recordEnvironment = bufferedRecordEnvironments.get(currentRow - 1);
+        if (this.aggregateFunctions.size() > 0 && this.currentRow < this.bufferedRecordEnvironments.size()) {
+            this.currentRow++;
+            this.recordEnvironment = this.bufferedRecordEnvironments.get(this.currentRow - 1);
             updateRecordEnvironment(true);
             hasNext = true;
         } else {
-            if (maxRows != 0 && currentRow >= maxRows) { //Reached the max row count
+            if (this.maxRows != 0 && this.currentRow >= this.maxRows) { //Reached the max row count
                 hasNext = false;
-            } else if (limit >= 0 && currentRow >= limit) { //Reached the row limit
+            } else if (this.limit >= 0 && this.currentRow >= this.limit) { //Reached the row limit
                 hasNext = false;
-            } else if (hitTail) {
+            } else if (this.hitTail) {
                 hasNext = false;
             } else {
-                hasNext = reader.next();
+                hasNext = this.reader.next();
             }
 
             if (hasNext) {
-                recordEnvironment = reader.getEnvironment();
+                this.recordEnvironment = this.reader.getEnvironment();
             } else {
-                recordEnvironment = null;
+                this.recordEnvironment = null;
             }
-
             //Give priority to where clause if exists. ObjectEnvironment contains the values of the current record for
             //the effective columns (Columns in the select part + where clause)
-            if (whereClause != null) {
+            if (this.whereClause != null) {
                 Map<String, Object> objectEnvironment = updateRecordEnvironment(hasNext);
                 while (hasNext) {
-                    if (Boolean.TRUE.equals(whereClause.isTrue(objectEnvironment))) {
+                    if (Boolean.TRUE.equals(this.whereClause.isTrue(objectEnvironment))) {
                         break;
                     }
-                    hasNext = reader.next();
+                    hasNext = this.reader.next();
                     if (hasNext) {
-                        recordEnvironment = reader.getEnvironment();
+                        this.recordEnvironment = this.reader.getEnvironment();
                     } else {
-                        recordEnvironment = null;
+                        this.recordEnvironment = null;
                     }
                     objectEnvironment = updateRecordEnvironment(hasNext);
                 }
             }
             if (hasNext) {
-                currentRow++;
+                this.currentRow++;
             } else {
-                hitTail = true;
+                this.hitTail = true;
             }
         }
-        nextResult = hasNext;
+        this.nextResult = hasNext;
         return hasNext;
     }
 
@@ -226,38 +220,35 @@ public class DASJResultSet implements ResultSet {
     private Map<String, Object> updateRecordEnvironment(boolean hasNext) throws SQLException {
         Map<String, Object> objectEnvironment = new HashMap<String, Object>();
         if (!hasNext) {
-            recordEnvironment = null;
+            this.recordEnvironment = null;
             return objectEnvironment;
         }
-
-        for(Object[] o : queryEnvironment) {
+        for(Object[] o : this.queryEnvironment) {
             String key = (String) o[0];
-            Object value = ((Expression) o[1]).eval(recordEnvironment);
+            Object value = ((Expression) o[1]).eval(this.recordEnvironment);
             objectEnvironment.put(key.toUpperCase(), value);
         }
-
-        for(String key : filterColumns) {
+        for(String key : this.filterColumns) {
             key = key.toUpperCase();
-            if (recordEnvironment.containsKey(key)) {
-                objectEnvironment.put(key, recordEnvironment.get(key));
+            if (this.recordEnvironment.containsKey(key)) {
+                objectEnvironment.put(key, this.recordEnvironment.get(key));
             }
         }
-
         return objectEnvironment;
     }
 
     @Override
     public void close() throws SQLException {
-        reader.close();
-        connectionClosed = true;
-        recordEnvironment = null;
-        bufferedRecordEnvironments = null;
+        this.reader.close();
+        this.connectionClosed = true;
+        this.recordEnvironment = null;
+        this.bufferedRecordEnvironments = null;
     }
 
     @Override
     public boolean wasNull() throws SQLException {
-        if (lastIndexRead >= 0) {
-            return getString(lastIndexRead) == null;
+        if (this.lastIndexRead >= 0) {
+            return getString(this.lastIndexRead) == null;
         } else {
             throw new SQLException("[Execption in was null]");
         }
@@ -503,12 +494,12 @@ public class DASJResultSet implements ResultSet {
      */
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        if (resultSetMetaData == null) {
-            String[] readerTypeNames = reader.getColumnTypes();
-            String[] readerColumnNames = reader.getColumnNames();
-            int[] readerColumnSizes = reader.getColumnSizes();
-            String tableAlias = reader.getTableAlias();
-            int columnCount = queryEnvironment.size();
+        if (this.resultSetMetaData == null) {
+            String[] readerTypeNames = this.reader.getColumnTypes();
+            String[] readerColumnNames = this.reader.getColumnNames();
+            int[] readerColumnSizes = this.reader.getColumnSizes();
+            String tableAlias = this.reader.getTableAlias();
+            int columnCount = this.queryEnvironment.size();
             String[] columnNames = new String[columnCount];
             String[] columnLabels = new String[columnCount];
             int[] columnSizes = new int[columnCount];
@@ -516,25 +507,24 @@ public class DASJResultSet implements ResultSet {
             /*
              * Create a record containing dummy values.
 			 */
-            HashSet<String> allReaderColumns = new HashSet<String>();
-            HashMap<String, Object> env = new HashMap<String, Object>();
+            Set<String> allReaderColumns = new HashSet<String>();
+            Map<String, Object> env = new HashMap<String, Object>();
             for (int i = 0; i < readerTypeNames.length; i++) {
                 Object literal = ServiceUtil.getLiteral(readerTypeNames[i]);
                 String columnName = readerColumnNames[i].toUpperCase();
                 env.put(columnName, literal);
                 allReaderColumns.add(columnName);
-                if (tableName != null) {
-                    env.put(tableName.toUpperCase() + "." + columnName, literal);
-                    allReaderColumns.add(tableName.toUpperCase() + "." + columnName);
+                if (this.tableName != null) {
+                    env.put(this.tableName.toUpperCase() + "." + columnName, literal);
+                    allReaderColumns.add(this.tableName.toUpperCase() + "." + columnName);
                 }
                 if (tableAlias != null) {
                     env.put(tableAlias + "." + columnName, literal);
                     allReaderColumns.add(tableAlias + "." + columnName);
                 }
             }
-
             for (int i = 0; i < columnCount; i++) {
-                Object[] o = queryEnvironment.get(i);
+                Object[] o = this.queryEnvironment.get(i);
                 columnNames[i] = (String) o[0];
                 columnLabels[i] = columnNames[i];
 
@@ -557,9 +547,9 @@ public class DASJResultSet implements ResultSet {
                     columnSizes[i] = columnSize;
                     result = expr.eval(env);
                 } catch (NullPointerException e) {
-                    e.printStackTrace();
+                    throw new SQLException("Error in Get Meta Data:",e);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    throw new SQLException("Error in Get Meta Data:",e);
                 }
                 if (result != null) {
                     typeNames[i] = ServiceUtil.getSQLType(result);
@@ -567,9 +557,9 @@ public class DASJResultSet implements ResultSet {
                     typeNames[i] = "expression";
                 }
             }
-            resultSetMetaData = new DASJResultSetMetaData(tableName, columnNames, columnLabels, typeNames, columnSizes);
+            this.resultSetMetaData = new DASJResultSetMetaData(this.tableName, columnNames, columnLabels, typeNames, columnSizes);
         }
-        return resultSetMetaData;
+        return this.resultSetMetaData;
     }
 
     @Override
@@ -579,7 +569,6 @@ public class DASJResultSet implements ResultSet {
 
     @Override
     public void clearWarnings() throws SQLException {
-
     }
 
     @Override
@@ -589,9 +578,8 @@ public class DASJResultSet implements ResultSet {
 
     @Override
     public Object getObject(int columnIndex) throws SQLException {
-        lastIndexRead = columnIndex;
+        this.lastIndexRead = columnIndex;
         checkStatus();
-
         if (columnIndex < 1 || columnIndex > this.queryEnvironment.size()) {
             throw new SQLException("[InvalidColumnIndex] DASJResultSet:getObject:" + columnIndex);
         }
@@ -599,9 +587,9 @@ public class DASJResultSet implements ResultSet {
             throw new SQLException("[CurserNotSet] DASJResultSet:getObject");
         }
 
-        Object[] o = queryEnvironment.get(columnIndex - 1);
-        if (recordEnvironment != null) {
-            return ((Expression) o[1]).eval(recordEnvironment);
+        Object[] o = this.queryEnvironment.get(columnIndex - 1);
+        if (this.recordEnvironment != null) {
+            return ((Expression) o[1]).eval(this.recordEnvironment);
         }
         return null;
     }
@@ -669,7 +657,7 @@ public class DASJResultSet implements ResultSet {
     public boolean isBeforeFirst() throws SQLException {
         checkStatus();
         if (isScrollable()) {
-            return currentRow == 0;
+            return this.currentRow == 0;
         } else {
             throw new SQLException("wrongResultSetType: ResultSet.isBeforeFirst()");
         }
@@ -679,7 +667,7 @@ public class DASJResultSet implements ResultSet {
     public boolean isAfterLast() throws SQLException {
         checkStatus();
         if (isScrollable()) {
-            return currentRow == bufferedRecordEnvironments.size() + 1;
+            return this.currentRow == this.bufferedRecordEnvironments.size() + 1;
         } else {
             return (!this.nextResult && this.currentRow > 0);
         }
@@ -689,7 +677,7 @@ public class DASJResultSet implements ResultSet {
     public boolean isFirst() throws SQLException {
         checkStatus();
         if (isScrollable()) {
-            return currentRow == 1;
+            return this.currentRow == 1;
         } else {
             throw new SQLException("wrongResultSetType: ResultSet.isFirst()");
         }
@@ -721,10 +709,10 @@ public class DASJResultSet implements ResultSet {
     @Override
     public int getRow() throws SQLException {
         checkStatus();
-        if (!isScrollable() && !nextResult) {
+        if (!isScrollable() && !this.nextResult) {
             return 0;
         } else {
-            return currentRow;
+            return this.currentRow;
         }
     }
 
@@ -756,22 +744,22 @@ public class DASJResultSet implements ResultSet {
 
     @Override
     public int getFetchDirection() throws SQLException {
-        return fetchDirection;
+        return this.fetchDirection;
     }
 
     @Override
     public void setFetchSize(int rows) throws SQLException {
-        fetchSize = rows;
+        this.fetchSize = rows;
     }
 
     @Override
     public int getFetchSize() throws SQLException {
-        return fetchSize;
+        return this.fetchSize;
     }
 
     @Override
     public int getType() throws SQLException {
-        return resultSetType;
+        return this.resultSetType;
     }
 
     @Override
@@ -796,222 +784,178 @@ public class DASJResultSet implements ResultSet {
 
     @Override
     public void updateNull(int columnIndex) throws SQLException {
-
     }
 
     @Override
     public void updateBoolean(int columnIndex, boolean x) throws SQLException {
-
     }
 
     @Override
     public void updateByte(int columnIndex, byte x) throws SQLException {
-
     }
 
     @Override
     public void updateShort(int columnIndex, short x) throws SQLException {
-
     }
 
     @Override
     public void updateInt(int columnIndex, int x) throws SQLException {
-
     }
 
     @Override
     public void updateLong(int columnIndex, long x) throws SQLException {
-
     }
 
     @Override
     public void updateFloat(int columnIndex, float x) throws SQLException {
-
     }
 
     @Override
     public void updateDouble(int columnIndex, double x) throws SQLException {
-
     }
 
     @Override
     public void updateBigDecimal(int columnIndex, BigDecimal x) throws SQLException {
-
     }
 
     @Override
     public void updateString(int columnIndex, String x) throws SQLException {
-
     }
 
     @Override
     public void updateBytes(int columnIndex, byte[] x) throws SQLException {
-
     }
 
     @Override
     public void updateDate(int columnIndex, Date x) throws SQLException {
-
     }
 
     @Override
     public void updateTime(int columnIndex, Time x) throws SQLException {
-
     }
 
     @Override
     public void updateTimestamp(int columnIndex, Timestamp x) throws SQLException {
-
     }
 
     @Override
     public void updateAsciiStream(int columnIndex, InputStream x, int length) throws SQLException {
-
     }
 
     @Override
     public void updateBinaryStream(int columnIndex, InputStream x, int length) throws SQLException {
-
     }
 
     @Override
     public void updateCharacterStream(int columnIndex, Reader x, int length) throws SQLException {
-
     }
 
     @Override
     public void updateObject(int columnIndex, Object x, int scaleOrLength) throws SQLException {
-
     }
 
     @Override
     public void updateObject(int columnIndex, Object x) throws SQLException {
-
     }
 
     @Override
     public void updateNull(String columnLabel) throws SQLException {
-
     }
 
     @Override
     public void updateBoolean(String columnLabel, boolean x) throws SQLException {
-
     }
 
     @Override
     public void updateByte(String columnLabel, byte x) throws SQLException {
-
     }
 
     @Override
     public void updateShort(String columnLabel, short x) throws SQLException {
-
     }
 
     @Override
     public void updateInt(String columnLabel, int x) throws SQLException {
-
     }
 
     @Override
     public void updateLong(String columnLabel, long x) throws SQLException {
-
     }
 
     @Override
     public void updateFloat(String columnLabel, float x) throws SQLException {
-
     }
 
     @Override
     public void updateDouble(String columnLabel, double x) throws SQLException {
-
     }
 
     @Override
     public void updateBigDecimal(String columnLabel, BigDecimal x) throws SQLException {
-
     }
 
     @Override
     public void updateString(String columnLabel, String x) throws SQLException {
-
     }
 
     @Override
     public void updateBytes(String columnLabel, byte[] x) throws SQLException {
-
     }
 
     @Override
     public void updateDate(String columnLabel, Date x) throws SQLException {
-
     }
 
     @Override
     public void updateTime(String columnLabel, Time x) throws SQLException {
-
     }
 
     @Override
     public void updateTimestamp(String columnLabel, Timestamp x) throws SQLException {
-
     }
 
     @Override
     public void updateAsciiStream(String columnLabel, InputStream x, int length) throws SQLException {
-
     }
 
     @Override
     public void updateBinaryStream(String columnLabel, InputStream x, int length) throws SQLException {
-
     }
 
     @Override
     public void updateCharacterStream(String columnLabel, Reader reader, int length) throws SQLException {
-
     }
 
     @Override
     public void updateObject(String columnLabel, Object x, int scaleOrLength) throws SQLException {
-
     }
 
     @Override
     public void updateObject(String columnLabel, Object x) throws SQLException {
-
     }
 
     @Override
     public void insertRow() throws SQLException {
-
     }
 
     @Override
     public void updateRow() throws SQLException {
-
     }
 
     @Override
     public void deleteRow() throws SQLException {
-
     }
 
     @Override
     public void refreshRow() throws SQLException {
-
     }
 
     @Override
     public void cancelRowUpdates() throws SQLException {
-
     }
 
     @Override
     public void moveToInsertRow() throws SQLException {
-
     }
 
     @Override
@@ -1021,7 +965,7 @@ public class DASJResultSet implements ResultSet {
 
     @Override
     public Statement getStatement() throws SQLException {
-        return statement;
+        return this.statement;
     }
 
     @Override
@@ -1116,42 +1060,34 @@ public class DASJResultSet implements ResultSet {
 
     @Override
     public void updateRef(int columnIndex, Ref x) throws SQLException {
-
     }
 
     @Override
     public void updateRef(String columnLabel, Ref x) throws SQLException {
-
     }
 
     @Override
     public void updateBlob(int columnIndex, Blob x) throws SQLException {
-
     }
 
     @Override
     public void updateBlob(String columnLabel, Blob x) throws SQLException {
-
     }
 
     @Override
     public void updateClob(int columnIndex, Clob x) throws SQLException {
-
     }
 
     @Override
     public void updateClob(String columnLabel, Clob x) throws SQLException {
-
     }
 
     @Override
     public void updateArray(int columnIndex, Array x) throws SQLException {
-
     }
 
     @Override
     public void updateArray(String columnLabel, Array x) throws SQLException {
-
     }
 
     @Override
@@ -1166,12 +1102,10 @@ public class DASJResultSet implements ResultSet {
 
     @Override
     public void updateRowId(int columnIndex, RowId x) throws SQLException {
-
     }
 
     @Override
     public void updateRowId(String columnLabel, RowId x) throws SQLException {
-
     }
 
     @Override
@@ -1181,27 +1115,23 @@ public class DASJResultSet implements ResultSet {
 
     @Override
     public boolean isClosed() throws SQLException {
-        return connectionClosed;
+        return this.connectionClosed;
     }
 
     @Override
     public void updateNString(int columnIndex, String nString) throws SQLException {
-
     }
 
     @Override
     public void updateNString(String columnLabel, String nString) throws SQLException {
-
     }
 
     @Override
     public void updateNClob(int columnIndex, NClob nClob) throws SQLException {
-
     }
 
     @Override
     public void updateNClob(String columnLabel, NClob nClob) throws SQLException {
-
     }
 
     @Override
@@ -1256,142 +1186,114 @@ public class DASJResultSet implements ResultSet {
 
     @Override
     public void updateNCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
-
     }
 
     @Override
     public void updateNCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
-
     }
 
     @Override
     public void updateAsciiStream(int columnIndex, InputStream x, long length) throws SQLException {
-
     }
 
     @Override
     public void updateBinaryStream(int columnIndex, InputStream x, long length) throws SQLException {
-
     }
 
     @Override
     public void updateCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
-
     }
 
     @Override
     public void updateAsciiStream(String columnLabel, InputStream x, long length) throws SQLException {
-
     }
 
     @Override
     public void updateBinaryStream(String columnLabel, InputStream x, long length) throws SQLException {
-
     }
 
     @Override
     public void updateCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
-
     }
 
     @Override
     public void updateBlob(int columnIndex, InputStream inputStream, long length) throws SQLException {
-
     }
 
     @Override
     public void updateBlob(String columnLabel, InputStream inputStream, long length) throws SQLException {
-
     }
 
     @Override
     public void updateClob(int columnIndex, Reader reader, long length) throws SQLException {
-
     }
 
     @Override
     public void updateClob(String columnLabel, Reader reader, long length) throws SQLException {
-
     }
 
     @Override
     public void updateNClob(int columnIndex, Reader reader, long length) throws SQLException {
-
     }
 
     @Override
     public void updateNClob(String columnLabel, Reader reader, long length) throws SQLException {
-
     }
 
     @Override
     public void updateNCharacterStream(int columnIndex, Reader x) throws SQLException {
-
     }
 
     @Override
     public void updateNCharacterStream(String columnLabel, Reader reader) throws SQLException {
-
     }
 
     @Override
     public void updateAsciiStream(int columnIndex, InputStream x) throws SQLException {
-
     }
 
     @Override
     public void updateBinaryStream(int columnIndex, InputStream x) throws SQLException {
-
     }
 
     @Override
     public void updateCharacterStream(int columnIndex, Reader x) throws SQLException {
-
     }
 
     @Override
     public void updateAsciiStream(String columnLabel, InputStream x) throws SQLException {
-
     }
 
     @Override
     public void updateBinaryStream(String columnLabel, InputStream x) throws SQLException {
-
     }
 
     @Override
     public void updateCharacterStream(String columnLabel, Reader reader) throws SQLException {
-
     }
 
     @Override
     public void updateBlob(int columnIndex, InputStream inputStream) throws SQLException {
-
     }
 
     @Override
     public void updateBlob(String columnLabel, InputStream inputStream) throws SQLException {
-
     }
 
     @Override
     public void updateClob(int columnIndex, Reader reader) throws SQLException {
-
     }
 
     @Override
     public void updateClob(String columnLabel, Reader reader) throws SQLException {
-
     }
 
     @Override
     public void updateNClob(int columnIndex, Reader reader) throws SQLException {
-
     }
 
     @Override
     public void updateNClob(String columnLabel, Reader reader) throws SQLException {
-
     }
 
     @Override
@@ -1416,7 +1318,7 @@ public class DASJResultSet implements ResultSet {
 
     protected void checkStatus() throws SQLException
     {
-        if (connectionClosed) {
+        if (this.connectionClosed) {
             throw new SQLException("[Closed Statement]: Driver.getParentLogger()");
         }
     }

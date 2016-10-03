@@ -27,14 +27,14 @@ import java.util.Set;
  */
 public class AsteriskExpression extends Expression {
 
-    String expression;
+    private String expression;
 
     public AsteriskExpression(String expression) {
         this.expression = expression;
     }
 
     public String toString() {
-        return expression;
+        return this.expression;
     }
 
     public List<String> getFilteredColumns(Set<String> availableColumns) {
@@ -42,6 +42,6 @@ public class AsteriskExpression extends Expression {
     }
 
     public Object eval(Map<String, Object> env) {
-        return expression;
+        return this.expression;
     }
 }

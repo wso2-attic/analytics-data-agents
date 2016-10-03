@@ -50,14 +50,14 @@ public class DASJDriver implements Driver {
         if (!url.startsWith(ServiceConstants.DAS_DRIVER_SETTINGS.URL_PREFIX)) {
             return null;
         }
-
         String connectionURL = url.substring(ServiceConstants.DAS_DRIVER_SETTINGS.URL_PREFIX.length());
         return new DASJConnection(connectionURL, info);
     }
 
     /**
      * Drivers will return true if they understand the subprotocol specified in the URL and false if they don't.
-     * This driver's protocols start with jdbc:dasjdriver
+     * This driver's protocols start with jdbc:dasjdriver.
+     *
      * @param url url the URL of the driver
      */
     @Override
@@ -67,29 +67,24 @@ public class DASJDriver implements Driver {
 
     /**
      * Allow a generic GUI tool to discover what properties it should prompt a human for in order to get
-     * enough information to connect to a database
+     * enough information to connect to a database.
      */
     @Override
     public DriverPropertyInfo[] getPropertyInfo(String url, Properties info) throws SQLException {
         if (info == null) {
             info = new Properties();
         }
-
         DriverPropertyInfo userProp = new DriverPropertyInfo(ServiceConstants.DAS_DRIVER_SETTINGS.DAS_USER,
                 info.getProperty(ServiceConstants.DAS_DRIVER_SETTINGS.DAS_USER));
         userProp.required = true;
         userProp.description = ServiceConstants.PROPERTY_DESCRIPTIONS.USERNAME;
-
         DriverPropertyInfo passwordProp = new DriverPropertyInfo(ServiceConstants.DAS_DRIVER_SETTINGS.DAS_PASS,
                 info.getProperty(ServiceConstants.DAS_DRIVER_SETTINGS.DAS_PASS));
         passwordProp.required = true;
         passwordProp.description = ServiceConstants.PROPERTY_DESCRIPTIONS.PASSWORD;
-
         DriverPropertyInfo[] dpi = new DriverPropertyInfo[2];
-
         dpi[0] = userProp;
         dpi[1] = passwordProp;
-
         return dpi;
     }
 
@@ -104,7 +99,7 @@ public class DASJDriver implements Driver {
     }
 
     /**
-     * Indicates whether have full support for the JDBC API & SQL 92 Entry Level
+     * Indicates whether have full support for the JDBC API & SQL 92 Entry Level.
      */
     @Override
     public boolean jdbcCompliant() {

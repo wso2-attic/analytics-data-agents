@@ -47,6 +47,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Vector;
 import java.util.concurrent.Executor;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This class implements the java.sql.Connection JDBC interface for the DASJDriver driver.
@@ -69,15 +71,17 @@ public class DASJConnection implements Connection {
 
     private Vector<Statement> dasStatements = new Vector<Statement>();
 
+    private static Logger logger = Logger.getLogger(DASJConnection.class.getName());
+
     /**
-     * Creates a new DAS Service Connection that takes the supplied path and properties
+     * Creates a new DAS Service Connection that takes the supplied path and properties.
      */
     protected DASJConnection(String url, Properties info) throws SQLException {
         if (url == null || url.length() == 0) {
             throw new IllegalArgumentException("[No Path]: DASJConnection.DASJConnection()");
         }
         this.connURL = url;
-        this.connURLForDASTables = connURL + ServiceConstants.DAS_SERVICE_QUERIES.DAS_TABLE_NAMES_QUERY;
+        this.connURLForDASTables = this.connURL + ServiceConstants.DAS_SERVICE_QUERIES.DAS_TABLE_NAMES_QUERY;
 
         if (info != null) {
             setProperties(info);
@@ -85,18 +89,20 @@ public class DASJConnection implements Connection {
     }
 
     /**
-     * Checks the Connection Status throws SQL Exception if connection is closed
+     * Checks the Connection Status throws SQL Exception if connection is closed.
+     *
      * @throws SQLException
      */
     protected void checkStatus() throws SQLException {
-        if (connectionClosed) {
+        if (this.connectionClosed) {
             throw new SQLException("[Closed Statement]: Driver.getParentLogger()");
         }
     }
 
     /**
      *  Creates a Statement object for sending SQL statements to the database.
-     *  Default type is TYPE_FORWARD_ONLY and default concurrency level is CONCUR_READ_ONLY
+     *  Default type is TYPE_FORWARD_ONLY and default concurrency level is CONCUR_READ_ONLY.
+     *
      *  @return a new default Statement object
      *  @throws SQLException
      */
@@ -104,13 +110,14 @@ public class DASJConnection implements Connection {
     public Statement createStatement() throws SQLException {
         checkStatus();
         DASJStatement statement = new DASJStatement(this, ResultSet.TYPE_FORWARD_ONLY);
-        dasStatements.add(statement);
+        this.dasStatements.add(statement);
         return statement;
     }
 
     /**
      * Creates a PreparedStatement object for sending parameterized SQL statements to the database.
-     * Default type is TYPE_FORWARD_ONLY and default concurrency level isCONCUR_READ_ONLY
+     * Default type is TYPE_FORWARD_ONLY and default concurrency level isCONCUR_READ_ONLY.
+     *
      * @param sql  an SQL statement that may contain one or more '?' IN parameter placeholders
      * @return a new default PreparedStatement object
      * @throws SQLException
@@ -119,7 +126,7 @@ public class DASJConnection implements Connection {
     public PreparedStatement prepareStatement(String sql) throws SQLException {
         checkStatus();
         PreparedStatement preparedStatement = new DASJPreparedStatement(this, sql, ResultSet.TYPE_FORWARD_ONLY);
-        dasStatements.add(preparedStatement);
+        this.dasStatements.add(preparedStatement);
         return preparedStatement;
     }
 
@@ -131,7 +138,7 @@ public class DASJConnection implements Connection {
     public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException {
         checkStatus();
         DASJStatement stmt = new DASJStatement(this, resultSetType);
-        dasStatements.add(stmt);
+        this.dasStatements.add(stmt);
         return stmt;
     }
 
@@ -144,40 +151,41 @@ public class DASJConnection implements Connection {
             throws SQLException {
         checkStatus();
         PreparedStatement preparedStatement = new DASJPreparedStatement(this, sql, resultSetType);
-        dasStatements.add(preparedStatement);
+        this.dasStatements.add(preparedStatement);
         return preparedStatement;
     }
 
     /*
      * Creates a Statement object for sending SQL statements to the database.
      * In the current implementation only CONCUR_READ_ONLY is supported for resultSetConcurrency and
-     * HOLD_CURSORS_OVER_COMMIT is allowd for resultSetHoldability
+     * HOLD_CURSORS_OVER_COMMIT is allowd for resultSetHoldability.
      */
     @Override
     public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability)
             throws SQLException {
         checkStatus();
         DASJStatement statement = new DASJStatement(this, resultSetType);
-        dasStatements.add(statement);
+        this.dasStatements.add(statement);
         return statement;
     }
 
     /*
      * Creates a Statement object for sending SQL statements to the database.
      * In the current implementation only CONCUR_READ_ONLY is supported for resultSetConcurrency and
-     * HOLD_CURSORS_OVER_COMMIT is allowd for resultSetHoldability
+     * HOLD_CURSORS_OVER_COMMIT is allowd for resultSetHoldability.
      */
     @Override
     public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency,
             int resultSetHoldability) throws SQLException {
         checkStatus();
         PreparedStatement preparedStatement = new DASJPreparedStatement(this, sql, resultSetType);
-        dasStatements.add(preparedStatement);
+        this.dasStatements.add(preparedStatement);
         return preparedStatement;
     }
 
     /**
      * Sets this connection's auto-commit mode to the given state.
+     *
      * @param autoCommit true to enable auto-commit mode; false to disable it
      * @throws SQLException
      */
@@ -196,12 +204,12 @@ public class DASJConnection implements Connection {
     @Override
     public void close() throws SQLException {
         closeDASStatements();
-        connectionClosed = true;
+        this.connectionClosed = true;
     }
 
     @Override
     public boolean isClosed() throws SQLException {
-        return connectionClosed;
+        return this.connectionClosed;
     }
 
     @Override
@@ -233,7 +241,7 @@ public class DASJConnection implements Connection {
 
     @Override
     public boolean isValid(int timeout) throws SQLException {
-        return !connectionClosed;
+        return !this.connectionClosed;
     }
 
     @Override
@@ -247,10 +255,10 @@ public class DASJConnection implements Connection {
      * @throws SQLException
      */
     private synchronized void closeDASStatements() throws SQLException {
-        while (dasStatements.size() > 0) {
-            dasStatements.firstElement().close();
+        while (this.dasStatements.size() > 0) {
+            this.dasStatements.firstElement().close();
         }
-        dasStatements.clear();
+        this.dasStatements.clear();
     }
 
     @Override
@@ -437,42 +445,43 @@ public class DASJConnection implements Connection {
     }
 
     public String getUserName() {
-        return userName;
+        return this.userName;
     }
 
     /*
-     * Set the Connection properties
+     * Set the Connection properties.
      */
     private void setProperties(Properties info) throws SQLException {
         // set the file extension to be used
         if (info.getProperty(ServiceConstants.DAS_DRIVER_SETTINGS.DAS_USER) != null) {
-            userName = info.getProperty(ServiceConstants.DAS_DRIVER_SETTINGS.DAS_USER);
+            this.userName = info.getProperty(ServiceConstants.DAS_DRIVER_SETTINGS.DAS_USER);
         }
-
         // set the file extension to be used
         if (info.getProperty(ServiceConstants.DAS_DRIVER_SETTINGS.DAS_PASS) != null) {
-            userPassword = info.getProperty(ServiceConstants.DAS_DRIVER_SETTINGS.DAS_PASS);
+            this.userPassword = info.getProperty(ServiceConstants.DAS_DRIVER_SETTINGS.DAS_PASS);
         }
     }
 
     /**
-     * Get list of table names from the DAS backend.     *
+     * Get list of table names from the DAS backend.
+     *
      * @return list of table names.
      * @throws SQLException if getting list of table names fails.
      */
     public List<String> getTableNames() throws SQLException {
         List<String> tableNames = null;
         try {
-            String sResponse = DASServiceConnector.sendGet(connURLForDASTables, userName, userPassword);
+            String sResponse = DASServiceConnector.sendGet(this.connURLForDASTables, this.userName, this.userPassword);
             tableNames = JSONUtil.parseSimpleArray(sResponse);
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new SQLException("Error in Get Table Names:",e);
         }
         return tableNames;
     }
 
     /**
-     * Get Data types of the given table from the DAS backend
+     * Get Data types of the given table from the DAS backend.
+     *
      * @param tableName Table name in which data types are requested
      * @return Map of column name -data type
      * @throws SQLException
@@ -481,37 +490,37 @@ public class DASJConnection implements Connection {
         HashMap<String, String> mapColumnDataTypes = null;
         tableName = ServiceUtil.extractTableName(tableName);
         String sRequestURL = getConnURLForTableSchema(tableName);
-
         try {
-            String sResponse = DASServiceConnector.sendGet(sRequestURL, userName, userPassword);
+            String sResponse = DASServiceConnector.sendGet(sRequestURL, this.userName, this.userPassword);
             mapColumnDataTypes = JSONUtil.parseSubArray(sResponse, ServiceConstants.DAS_RESPONSE_KEYS.COLUMNS,
                     ServiceConstants.DAS_RESPONSE_KEYS.TYPE);
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new SQLException("Error in Get Column Data Types :",e);
         }
         return mapColumnDataTypes;
     }
 
     /**
-     * Get a list of primary keys of the given table     *
+     * Get a list of primary keys of the given table.
+     *
      * @param tableName Name of the table where primary keys are required
      */
     public List<String> getPrimaryKeys(String tableName) {
         List<String> result = new LinkedList<String>();
         tableName = ServiceUtil.extractTableName(tableName);
         String sRequestURL = getConnURLForTableSchema(tableName);
-
         try {
-            String sResponse = DASServiceConnector.sendGet(sRequestURL, userName, userPassword);
+            String sResponse = DASServiceConnector.sendGet(sRequestURL, this.userName, this.userPassword);
             result = JSONUtil.parseSubArray(sResponse, ServiceConstants.DAS_RESPONSE_KEYS.PRIMARYKEYS);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error in Get Primary Keys:", e);
         }
         return result;
     }
 
     /**
-     * Get List of Indexes of a given table
+     * Get List of Indexes of a given table.
+     *
      * @param tableName Table in which index details are required
      */
     public List<String> getIndexes(String tableName) {
@@ -519,19 +528,19 @@ public class DASJConnection implements Connection {
         List<String> result = new LinkedList<String>();
         tableName = ServiceUtil.extractTableName(tableName);
         String sRequestURL = getConnURLForTableSchema(tableName);
-
         try {
-            String sResponse = DASServiceConnector.sendGet(sRequestURL, userName, userPassword);
+            String sResponse = DASServiceConnector.sendGet(sRequestURL, this.userName, this.userPassword);
             result = JSONUtil.parseSubArrayWithCheckValue(sResponse, ServiceConstants.DAS_RESPONSE_KEYS.COLUMNS,
                     ServiceConstants.DAS_RESPONSE_KEYS.ISINDEX);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error in Get Indexes:", e);
         }
         return result;
     }
 
     /**
-     * Get the data of the given table
+     * Get the data of the given table.
+     *
      * @param tableName Table name in which data is required.
      * @return String JSON Response from DAS backend which contains the table data
      */
@@ -539,46 +548,46 @@ public class DASJConnection implements Connection {
         tableName = ServiceUtil.extractTableName(tableName);
         String sRequestURL = getConnURLForTable(tableName);
         String sResponse = null;
-
         try {
-            sResponse = DASServiceConnector.sendGet(sRequestURL, userName, userPassword);
+            sResponse = DASServiceConnector.sendGet(sRequestURL, this.userName, this.userPassword);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Error in Get Table Data:", e);
         }
         return sResponse;
     }
 
     /**
-     * Returns the conneciton url for this Connection
+     * Returns the conneciton url for this Connection.
      */
     public String getURL() {
         String url = "";
-        if (connURL != null) {
-            url = ServiceConstants.DAS_DRIVER_SETTINGS.URL_PREFIX + connURL;
+        if (this.connURL != null) {
+            url = ServiceConstants.DAS_DRIVER_SETTINGS.URL_PREFIX + this.connURL;
         }
         return url;
     }
 
     /**
      * Removes the Statements of the current connection , when statements are closing.
+     *
      * @param statement Statment to remvoe
      */
     public void removeStatement(Statement statement) {
-        dasStatements.remove(statement);
+        this.dasStatements.remove(statement);
     }
 
     /*
-     * Create the DAS Backend url for given table
+     * Create the DAS Backend url for given table.
      */
     private String getConnURLForTable(String tableName){
-        return connURLForDASTables + ServiceConstants.DAS_SERVICE_QUERIES.URL_PATH_SEPERATOR + tableName;
+        return this.connURLForDASTables + ServiceConstants.DAS_SERVICE_QUERIES.URL_PATH_SEPERATOR + tableName;
     }
 
     /*
-     * Create the DAS Backend url for given table for schema data
+     * Create the DAS Backend url for given table for schema data.
      */
     private String getConnURLForTableSchema(String tableName){
-        return connURLForDASTables + ServiceConstants.DAS_SERVICE_QUERIES.URL_PATH_SEPERATOR + tableName
+        return this.connURLForDASTables + ServiceConstants.DAS_SERVICE_QUERIES.URL_PATH_SEPERATOR + tableName
                 + ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_QUERY;
     }
 }

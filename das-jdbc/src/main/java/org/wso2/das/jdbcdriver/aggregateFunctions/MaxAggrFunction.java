@@ -25,26 +25,27 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Class which implements the SQL MAX Aggregation function
+ * Class which implements the SQL MAX Aggregation function.
  */
 public class MaxAggrFunction extends AggregateFunction {
-    Expression expression;
-    Object maxValue = null;
+
+    private Expression expression;
+    private Object maxValue = null;
 
     public MaxAggrFunction(Expression expression) {
         this.expression = expression;
     }
 
     /**
-     * Evaluate each row against the function
+     * Evaluate each row against the function.
+     *
      * @param env RecordEnvironment which contains the data
      */
     @Override public void processRow(Map<String, Object> env) {
-
-        Object o = expression.eval(env);
+        Object o = this.expression.eval(env);
         if (o != null) {
-            if (maxValue == null || ((Comparable) maxValue).compareTo(o) < 0) {
-                maxValue = o;
+            if (this.maxValue == null || ((Comparable) this.maxValue).compareTo(o) < 0) {
+                this.maxValue = o;
             }
         }
     }
@@ -55,9 +56,10 @@ public class MaxAggrFunction extends AggregateFunction {
 
     /**
      * Get the evaluated result of the function with the given data.
+     *
      * @param env - RecordEnvironment which contains the details of the record
      */
     public Object eval(Map<String, Object> env) {
-        return maxValue;
+        return this.maxValue;
     }
 }

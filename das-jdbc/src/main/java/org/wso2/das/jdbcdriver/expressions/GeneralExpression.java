@@ -22,12 +22,12 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Expression which holds key value pairs of other expressions
+ * Expression which holds key value pairs of other expressions.
  */
 public class GeneralExpression extends Expression {
 
-    String key;
-    Expression expression;
+    private String key;
+    private Expression expression;
 
     public GeneralExpression(String fieldName, Expression exp) {
         this.key = fieldName.toUpperCase();
@@ -35,14 +35,14 @@ public class GeneralExpression extends Expression {
     }
 
     public Object eval(Map<String, Object> env) {
-        return expression.eval(env);
+        return this.expression.eval(env);
     }
 
     public String toString() {
-        return key + ": " + expression.toString();
+        return this.key + ": " + this.expression.toString();
     }
 
     public List<String> getFilteredColumns(Set<String> availableColumns) {
-        return expression.getFilteredColumns(availableColumns);
+        return this.expression.getFilteredColumns(availableColumns);
     }
 }
