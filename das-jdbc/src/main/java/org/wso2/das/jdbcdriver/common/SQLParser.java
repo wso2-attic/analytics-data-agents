@@ -38,6 +38,7 @@ import org.wso2.das.jdbcdriver.expressions.RelationOpExpression;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -62,46 +63,47 @@ public class SQLParser {
      * Parse the SQL Query String by using the ZQL parser.
      */
     public void parse() throws SQLException {
-        System.out.println("SQL:" + sql);
         if (sql.length() > 0) {
             if (sql.charAt(sql.length() - 1) != ';') {
                 sql = sql.concat(";");
             }
         }
-        InputStream is = new ByteArrayInputStream(sql.getBytes());
-        ZqlParser p = new ZqlParser(new DataInputStream(is));
-        ZStatement st = null;
-        try {
-            st = p.readStatement();
+        ZStatement stmt = null;
+        try (InputStream sqlInput = new ByteArrayInputStream(sql.getBytes())) {
+            ZqlParser parser = new ZqlParser(new DataInputStream(sqlInput));
+            stmt = parser.readStatement();
+        } catch (IOException e) {
+            throw new SQLException("Error in Parsing SQL:", e);
         } catch (ParseException e) {
-            throw new SQLException("Error in Parsing SQL:",e);
+            throw new SQLException("Error in Parsing SQL:", e);
         }
-        if (st != null) {
-            if (st instanceof ZQuery) {
-                ZQuery q = (ZQuery) st;
-                Vector sel = q.getSelect(); // SELECT part of the query
-                Vector from = q.getFrom();  // FROM part of the query
-                ZExpression where = (ZExpression) q.getWhere();  // WHERE part of the query
-                if (where != null) {
-                    this.whereExpression = getWhereClauseExpression(where);
+        if (stmt != null) {
+            if (stmt instanceof ZQuery) {
+                ZQuery query = (ZQuery) stmt;
+                Vector selectPart = query.getSelect(); // SELECT part of the query
+                Vector fromPart = query.getFrom();  // FROM part of the query
+                ZExpression wherePart = (ZExpression) query.getWhere();  // WHERE part of the query
+                if (wherePart != null) {
+                    this.whereExpression = getWhereClauseExpression(wherePart);
                 }
-                if (from.size() > 1) {
+                if (fromPart.size() > 1) {
                     throw new SQLException("Joins are not supported");
                 }
                 // Retrieve the table name in the FROM clause
-                ZFromItem table = (ZFromItem) from.elementAt(0);
+                ZFromItem table = (ZFromItem) fromPart.elementAt(0);
                 this.sTableName = table.getTable();
-                if (sel.size() == 0) {
-                    this.queryEnvironment.add(new Object[] { "*", new AsteriskExpression("*") });
+                if (selectPart.size() == 0) {
+                    this.queryEnvironment.add(new Object[] { ServiceConstants.DAS_CONSTANTS.ASTERISK,
+                            new AsteriskExpression(ServiceConstants.DAS_CONSTANTS.ASTERISK) });
                 } else {
-                    for (int i = 0; i < sel.size(); i++) {
-                        ZSelectItem item = (ZSelectItem) sel.elementAt(i);
+                    for (int i = 0; i < selectPart.size(); i++) {
+                        ZSelectItem item = (ZSelectItem) selectPart.elementAt(i);
                         String columnName = item.getColumn();
                         String aggragateName = item.getAggregate();
                         if (aggragateName != null) {
                             Expression funcExpression;
-                            if (columnName.equals("*")) {
-                                funcExpression = new AsteriskExpression("*");
+                            if (columnName.equals(ServiceConstants.DAS_CONSTANTS.ASTERISK)) {
+                                funcExpression = new AsteriskExpression(ServiceConstants.DAS_CONSTANTS.ASTERISK);
                             } else {
                                 funcExpression = new ColumnName(columnName);
                             }
@@ -109,12 +111,11 @@ public class SQLParser {
                                     funcExpression);
                             this.queryEnvironment.add(new Object[] { columnName, aggregateExpression });
                         } else {
-                            if (columnName.equals("*")) {
+                            if (columnName.equals(ServiceConstants.DAS_CONSTANTS.ASTERISK)) {
                                 this.queryEnvironment
                                         .add(new Object[] { columnName, new AsteriskExpression(columnName) });
                             } else {
-                                if (columnName
-                                        .startsWith(ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME + ".")) {
+                                if (columnName.startsWith(ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME + ".")) {
                                     columnName = columnName.substring(
                                             ServiceConstants.DAS_SERVICE_QUERIES.DAS_SCHEMA_NAME.length() + 1);
                                 }

@@ -50,9 +50,9 @@ public class JSONUtil {
         try {
             Object obj = parser.parse(sInput);
             JSONArray array = (JSONArray) obj;
-            for(Object o : array) {
-                String s = (String)o;
-                listValues.add(s);
+            for (Object arrObj : array) {
+                String str = (String) arrObj;
+                listValues.add(str);
             }
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Error in Parse simple array:", e);
@@ -73,7 +73,6 @@ public class JSONUtil {
         try {
             Object obj = parser.parse(sInput);
             JSONObject internalObj = (JSONObject) ((JSONObject) obj).get(lOneHeader);
-
             for (Map.Entry entry : (Set<Map.Entry>) internalObj.entrySet()) {
                 String sKey = (String) entry.getKey();
                 JSONObject valObj = (JSONObject) entry.getValue();
@@ -95,7 +94,6 @@ public class JSONUtil {
         try {
             Object obj = parser.parse(sInput);
             JSONObject internalObj = (JSONObject) ((JSONObject) obj).get(lOneHeader);
-
             for (Map.Entry entry : (Set<Map.Entry>) internalObj.entrySet()) {
                 String sKey = (String) entry.getKey();
                 JSONObject valObj = (JSONObject) entry.getValue();
@@ -123,8 +121,8 @@ public class JSONUtil {
             Object jsonObj = parser.parse(sInput);
             Object obj = ((JSONObject) jsonObj).get(lOneHeader);
             JSONArray array = (JSONArray) obj;
-            for(Object o : array) {
-                String subValue = (String)o;
+            for (Object arrObj : array) {
+                String subValue = (String) arrObj;
                 listReturn.add(subValue);
             }
         } catch (Exception e) {
@@ -149,8 +147,8 @@ public class JSONUtil {
             List<String> listColumnNames = new ArrayList<String>();
             List<String> listColumnDataTypes = new ArrayList<String>();
             //The data type of the Column "_version" is not present in the schema query.
-            colDataTypes.put(ServiceConstants.DAS_RESPONSE_DATA.ROW_VERSION,
-                    ServiceConstants.DATATYPES.DATATYPE_STRING);
+            colDataTypes
+                    .put(ServiceConstants.DAS_RESPONSE_DATA.ROW_VERSION, ServiceConstants.DATATYPES.DATATYPE_STRING);
             for (int i = 0; i < arr.size(); i++) {
                 JSONObject dataObj = (JSONObject) arr.get(i);
                 long lTime = (Long) dataObj.get(ServiceConstants.DAS_RESPONSE_DATA.ROW_TIMESTAMP);
@@ -162,7 +160,7 @@ public class JSONUtil {
                     //Get the column names in the order appear in the "values" object.
                     // Extract this info only for the first row.
                     if (i == 0) {
-                        if (sKey.startsWith("_")) {
+                        if (sKey.startsWith(ServiceConstants.DAS_CONSTANTS.UNDERSCORE)) {
                             sKey = sKey.substring(1);
                         }
                         listColumnNames.add(sKey.toUpperCase());

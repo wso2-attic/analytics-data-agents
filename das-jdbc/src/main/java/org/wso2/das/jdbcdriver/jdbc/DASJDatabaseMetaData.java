@@ -130,8 +130,6 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
     public ResultSet getColumns(String catalog, String schemaPattern, String tableNamePattern, String columnNamePattern)
             throws SQLException {
         List<Object[]> columnValues = new ArrayList<Object[]>();
-        System.out.println("DAS Columns:catalog:" + catalog + "|schemaPattern:" + schemaPattern + "|tableNamePattern:"
-                + tableNamePattern + "|columnNamePattern:" + columnNamePattern);
         if (this.statement == null) {
             this.statement = (DASJStatement) this.connection.createStatement();
         }
@@ -178,7 +176,6 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
      */
     @Override
     public ResultSet getPrimaryKeys(String catalog, String schema, String table) throws SQLException {
-        System.out.println("catalog:" + catalog + "|schema:" + schema + "|table:" + table);
         List<Object[]> columnValues = new ArrayList<Object[]>();
         List<String> primaryKeys = ((DASJConnection) this.connection).getPrimaryKeys(table);
         int iSeq = 0;
@@ -1108,14 +1105,14 @@ public class DASJDatabaseMetaData implements DatabaseMetaData {
             throws SQLException {
         DataReader reader = new DataReader(columnNames.split(","), columnTypes.split(","), columnValues);
         List<Object[]> queryEnvironment = new ArrayList<Object[]>();
-        queryEnvironment.add(new Object[] { "*", new AsteriskExpression("*") });
+        queryEnvironment.add(new Object[] { ServiceConstants.DAS_CONSTANTS.ASTERISK,
+                new AsteriskExpression(ServiceConstants.DAS_CONSTANTS.ASTERISK) });
         ResultSet rs;
         try {
             if (this.statement == null) {
                 this.statement = (DASJStatement) this.connection.createStatement();
             }
-            rs = new DASJResultSet(this.statement, reader, "", queryEnvironment, ResultSet.TYPE_FORWARD_ONLY, -1,
-                    null);
+            rs = new DASJResultSet(this.statement, reader, "", queryEnvironment, ResultSet.TYPE_FORWARD_ONLY, -1, null);
         } catch (ClassNotFoundException e) {
             throw new SQLException(e.getMessage());
         }

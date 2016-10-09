@@ -36,7 +36,6 @@ public class DASServiceConnector {
      * @throws Exception
      */
     public static String sendGet(String url, String user, String pass) throws Exception {
-        System.out.println("REQUEST:" + url);
         URL obj = new URL(url);
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
         // optional default is GET
@@ -45,15 +44,13 @@ public class DASServiceConnector {
         String userPassword = user + ":" + pass;
         String encoding = new sun.misc.BASE64Encoder().encode(userPassword.getBytes());
         con.setRequestProperty("Authorization", "Basic " + encoding);
-        int responseCode = con.getResponseCode();
-        System.out.println("DAS Service Response Code:" + responseCode);
-        BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-        String inputLine;
         StringBuilder response = new StringBuilder();
-        while ((inputLine = in.readLine()) != null) {
-            response.append(inputLine);
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+            String inputLine;
+            while ((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
+            }
         }
-        in.close();
         return (response.toString());
     }
 }

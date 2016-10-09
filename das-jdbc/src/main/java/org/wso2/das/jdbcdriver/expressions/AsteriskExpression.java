@@ -37,10 +37,6 @@ public class AsteriskExpression extends Expression {
         return this.expression;
     }
 
-    public List<String> getFilteredColumns(Set<String> availableColumns) {
-        return new LinkedList<String>();
-    }
-
     public Object eval(Map<String, Object> env) {
         return this.expression;
     }

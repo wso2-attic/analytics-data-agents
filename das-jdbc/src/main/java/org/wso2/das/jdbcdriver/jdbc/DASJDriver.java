@@ -82,10 +82,10 @@ public class DASJDriver implements Driver {
                 info.getProperty(ServiceConstants.DAS_DRIVER_SETTINGS.DAS_PASS));
         passwordProp.required = true;
         passwordProp.description = ServiceConstants.PROPERTY_DESCRIPTIONS.PASSWORD;
-        DriverPropertyInfo[] dpi = new DriverPropertyInfo[2];
-        dpi[0] = userProp;
-        dpi[1] = passwordProp;
-        return dpi;
+        DriverPropertyInfo[] propertyInfo = new DriverPropertyInfo[2];
+        propertyInfo[0] = userProp;
+        propertyInfo[1] = passwordProp;
+        return propertyInfo;
     }
 
     @Override

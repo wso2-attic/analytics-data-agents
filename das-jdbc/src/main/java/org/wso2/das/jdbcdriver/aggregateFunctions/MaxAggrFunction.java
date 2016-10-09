@@ -41,17 +41,14 @@ public class MaxAggrFunction extends AggregateFunction {
      *
      * @param env RecordEnvironment which contains the data
      */
-    @Override public void processRow(Map<String, Object> env) {
+    @Override
+    public void processRow(Map<String, Object> env) {
         Object o = this.expression.eval(env);
         if (o != null) {
             if (this.maxValue == null || ((Comparable) this.maxValue).compareTo(o) < 0) {
                 this.maxValue = o;
             }
         }
-    }
-
-    public List<String> getFilteredColumns(Set<String> availableColumns) {
-        return new LinkedList<String>();
     }
 
     /**

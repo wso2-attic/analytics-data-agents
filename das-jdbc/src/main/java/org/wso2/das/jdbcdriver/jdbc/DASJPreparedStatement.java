@@ -58,7 +58,6 @@ public class DASJPreparedStatement extends DASJStatement implements PreparedStat
 
     @Override
     public ResultSet executeQuery() throws SQLException {
-        System.out.println("QUERY:" + this.sqlQuery);
         checkStatus();
         if (prevResultSet != null) {
             prevResultSet.close();

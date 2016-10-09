@@ -37,12 +37,30 @@ public class ServiceConstants {
         public static final String  DAS_DB_VERSION              = "1";
     }
 
+    public static final class DAS_CONSTANTS {
+        public static final String  UNDERSCORE                  = "_";
+        public static final String  ASTERISK                    = "*";
+        public static final String  SINGLE_QUOTE                = "'";
+        public static final String  DOUBLE_QUOTE                = "\"";
+        public static final String  PERCENT_SIGN                = "%";
+        public static final String  DOT                         = ".";
+        public static final String  EMPTY_STRING                = "";
+        public static final String  REGEX_PERCENT               = "%_";
+        public static final String  REGEX_ALL                   = ".*";
+        public static final String  DEFAULT_DATE                = "1970-01-01";
+        public static final String  DEFAULT_TIME                = "00:00:00";
+        public static final String  DEFAULT_DATETIME            = "1970-01-01 00:00:00";
+        public static final Character  CHAR_PERCENT_SIGN        = '%';
+        public static final Character  CHAR_UNDERSCORE_SIGN     = '_';
+
+    }
+
     public static final class DAS_SERVICE_QUERIES {
         public static final String  DAS_SCHEMA_NAME             = "analytics";
         public static final String  DAS_TABLE_NAMES_QUERY       = "/tables";
         public static final String  DAS_SCHEMA_QUERY            = "/schema";
         public static final char    URL_PATH_SEPERATOR          = '/';
-        public static final String DEFAULT_ESCAPE_STRING        = "\\";
+        public static final String  DEFAULT_ESCAPE_STRING       = "\\";
     }
 
     public static final class DAS_RESPONSE_KEYS{

@@ -54,10 +54,6 @@ public class CountAggrFunction extends AggregateFunction {
         }
     }
 
-    public List<String> getFilteredColumns(Set<String> availableColumns) {
-        return new LinkedList<String>();
-    }
-
     /**
      * Get the evaluated result of the function with the given data.
      *

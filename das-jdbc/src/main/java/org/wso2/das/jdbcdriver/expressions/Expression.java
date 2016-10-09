@@ -17,6 +17,7 @@
  */
 package org.wso2.das.jdbcdriver.expressions;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +32,7 @@ public abstract class Expression {
     }
 
     public List<String> getFilteredColumns(Set<String> availableColumns) {
-        return null;
+        return new LinkedList<String>();
     }
 
     public Boolean isTrue(Map<String, Object> env) {

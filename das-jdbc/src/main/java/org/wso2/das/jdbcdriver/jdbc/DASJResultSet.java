@@ -119,7 +119,7 @@ public class DASJResultSet implements ResultSet {
                 AsteriskExpression asteriskExpression = (AsteriskExpression) o[1];
 
                 String asterisk = asteriskExpression.toString();
-                if (!(asterisk.equals("*"))) {
+                if (!(asterisk.equals(ServiceConstants.DAS_CONSTANTS.ASTERISK))) {
                     throw new SQLException("[Invalid Column Name]: " + asterisk);
                 }
                 this.queryEnvironment.remove(i);
@@ -619,9 +619,8 @@ public class DASJResultSet implements ResultSet {
         String str = getString(columnIndex);
         if (str != null) {
             return new StringReader(str);
-        } else {
-            return null;
         }
+        return null;
     }
 
     @Override
@@ -629,9 +628,8 @@ public class DASJResultSet implements ResultSet {
         String str = getString(columnLabel);
         if (str != null) {
             return new StringReader(str);
-        } else {
-            return null;
         }
+        return null;
     }
 
     @Override

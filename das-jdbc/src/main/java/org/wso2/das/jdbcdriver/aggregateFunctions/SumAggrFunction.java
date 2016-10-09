@@ -60,24 +60,20 @@ public class SumAggrFunction extends AggregateFunction {
         }
     }
 
-    public List<String> getFilteredColumns(Set<String> availableColumns) {
-        return new LinkedList<String>();
-    }
-
     /**
      * Get the evaluated result of the function with the given data.
      *
      * @param env - RecordEnvironment which contains the details of the record
      */
     public Object eval(Map<String, Object> env) {
-        Object retval = null;
+        Object retVal = null;
         try {
             if (this.sum != null) {
-                retval = this.sum.longValueExact();
+                retVal = this.sum.longValueExact();
             }
         } catch (ArithmeticException e) {
-            retval = this.sum.doubleValue();
+            retVal = this.sum.doubleValue();
         }
-        return retval;
+        return retVal;
     }
 }

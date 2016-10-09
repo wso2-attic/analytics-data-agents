@@ -37,37 +37,53 @@ public class ServiceUtil {
      * @param sqlTypeName Sql Type input
      */
     public static Object getLiteral(String sqlTypeName) {
-        Object retval = null;
+        Object retVal = null;
         sqlTypeName = sqlTypeName.toUpperCase();
-        if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_STRING)) {
-            retval = "";
-        } else if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_BOOLEAN)) {
-            retval = Boolean.FALSE;
-        } else if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_BYTE)) {
-            retval = Byte.valueOf((byte) 1);
-        } else if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_SHORT)) {
-            retval = Short.valueOf((short) 1);
-        } else if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_INT) || sqlTypeName
-                .equals(ServiceConstants.DATATYPES.DATATYPE_INTEGER)) {
-            retval = Integer.valueOf(1);
-        } else if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_LONG)) {
-            retval = Long.valueOf(1);
-        } else if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_FLOAT)) {
-            retval = Float.valueOf(1);
-        } else if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_DOUBLE)) {
-            retval = Double.valueOf(1);
-        } else if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_BIGDECIMAL)) {
-            retval = BigDecimal.valueOf(1);
-        } else if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_DATE)) {
-            retval = Date.valueOf("1970-01-01");
-        } else if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_TIME)) {
-            retval = Time.valueOf("00:00:00");
-        } else if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_TIMESTAMP)) {
-            retval = Timestamp.valueOf("1970-01-01 00:00:00");
-        } else if (sqlTypeName.equals(ServiceConstants.DATATYPES.DATATYPE_ASCIISTREAM)) {
-            retval = new ByteArrayInputStream(new byte[] { });
+        switch (sqlTypeName) {
+            case ServiceConstants.DATATYPES.DATATYPE_STRING:
+                retVal = ServiceConstants.DAS_CONSTANTS.EMPTY_STRING;
+                break;
+            case ServiceConstants.DATATYPES.DATATYPE_BOOLEAN:
+                retVal = Boolean.FALSE;
+                break;
+            case ServiceConstants.DATATYPES.DATATYPE_BYTE:
+                retVal = Byte.valueOf((byte) 1);
+                break;
+            case ServiceConstants.DATATYPES.DATATYPE_SHORT:
+                retVal = Short.valueOf((short) 1);
+                break;
+            case ServiceConstants.DATATYPES.DATATYPE_INT:
+            case ServiceConstants.DATATYPES.DATATYPE_INTEGER:
+                retVal = Integer.valueOf(1);
+                break;
+            case ServiceConstants.DATATYPES.DATATYPE_LONG:
+                retVal = Long.valueOf(1);
+                break;
+            case ServiceConstants.DATATYPES.DATATYPE_FLOAT:
+                retVal = Float.valueOf(1);
+                break;
+            case ServiceConstants.DATATYPES.DATATYPE_DOUBLE:
+                retVal = Double.valueOf(1);
+                break;
+            case ServiceConstants.DATATYPES.DATATYPE_BIGDECIMAL:
+                retVal = BigDecimal.valueOf(1);
+                break;
+            case ServiceConstants.DATATYPES.DATATYPE_DATE:
+                retVal = Date.valueOf(ServiceConstants.DAS_CONSTANTS.DEFAULT_DATE);
+                break;
+            case ServiceConstants.DATATYPES.DATATYPE_TIME:
+                retVal = Time.valueOf(ServiceConstants.DAS_CONSTANTS.DEFAULT_TIME);
+                break;
+            case ServiceConstants.DATATYPES.DATATYPE_TIMESTAMP:
+                retVal = Timestamp.valueOf(ServiceConstants.DAS_CONSTANTS.DEFAULT_DATETIME);
+                break;
+            case ServiceConstants.DATATYPES.DATATYPE_ASCIISTREAM:
+                retVal = new ByteArrayInputStream(new byte[] { });
+                break;
+            default:
+                retVal = null;
         }
-        return retval;
+        return retVal;
     }
 
     /**
@@ -76,35 +92,35 @@ public class ServiceUtil {
      * @param literal Object which need to get the sql type
      */
     public static String getSQLType(Object literal) {
-        String retval = null;
         if (literal instanceof String) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_STRING;
+            return ServiceConstants.DATATYPES.DATATYPE_STRING;
         } else if (literal instanceof Boolean) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_BOOLEAN;
+            return ServiceConstants.DATATYPES.DATATYPE_BOOLEAN;
         } else if (literal instanceof Byte) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_BYTE;
+            return ServiceConstants.DATATYPES.DATATYPE_BYTE;
         } else if (literal instanceof Short) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_SHORT;
+            return ServiceConstants.DATATYPES.DATATYPE_SHORT;
         } else if (literal instanceof Integer) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_INT;
+            return ServiceConstants.DATATYPES.DATATYPE_INT;
         } else if (literal instanceof Long) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_LONG;
+            return ServiceConstants.DATATYPES.DATATYPE_LONG;
         } else if (literal instanceof Float) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_FLOAT;
+            return ServiceConstants.DATATYPES.DATATYPE_FLOAT;
         } else if (literal instanceof Double) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_DOUBLE;
+            return ServiceConstants.DATATYPES.DATATYPE_DOUBLE;
         } else if (literal instanceof BigDecimal) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_BIGDECIMAL;
+            return ServiceConstants.DATATYPES.DATATYPE_BIGDECIMAL;
         } else if (literal instanceof Date) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_DATE;
+            return ServiceConstants.DATATYPES.DATATYPE_DATE;
         } else if (literal instanceof Time) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_TIME;
+            return ServiceConstants.DATATYPES.DATATYPE_TIME;
         } else if (literal instanceof Timestamp) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_TIMESTAMP;
+            return ServiceConstants.DATATYPES.DATATYPE_TIMESTAMP;
         } else if (literal instanceof InputStream) {
-            retval = ServiceConstants.DATATYPES.DATATYPE_ASCIISTREAM;
+            return ServiceConstants.DATATYPES.DATATYPE_ASCIISTREAM;
+        } else {
+            return null;
         }
-        return retval;
     }
 
     /**
@@ -115,15 +131,16 @@ public class ServiceUtil {
      * @param input       Input string which needs to match with the given pattern
      */
     public static boolean isPatternMatched(String likePattern, String escape, CharSequence input) {
-        boolean retval;
-        int percentIndex = likePattern.indexOf('%');
-        int underscoreIndex = likePattern.indexOf('_');
+        boolean retVal;
+        int percentIndex = likePattern.indexOf(ServiceConstants.DAS_CONSTANTS.CHAR_PERCENT_SIGN);
+        int underscoreIndex = likePattern.indexOf(ServiceConstants.DAS_CONSTANTS.CHAR_UNDERSCORE_SIGN);
         if (percentIndex < 0 && underscoreIndex < 0) {
-            retval = likePattern.equals(input); //No wildcards. Compare the string.
+            retVal = likePattern.equals(input); //No wildcards. Compare the string.
         } else {
             boolean isEscaped = false;
             StringBuilder regex = new StringBuilder();
-            StringTokenizer tokenizer = new StringTokenizer(likePattern, "%_" + escape, true);
+            StringTokenizer tokenizer = new StringTokenizer(likePattern,
+                    ServiceConstants.DAS_CONSTANTS.REGEX_PERCENT + escape, true);
             while (tokenizer.hasMoreTokens()) {
                 String token = tokenizer.nextToken();
                 if (token.equals(escape)) {
@@ -135,10 +152,10 @@ public class ServiceUtil {
                 } else {
                     if (isEscaped) {
                         regex.append(Pattern.quote(token));
-                    } else if (token.equals("%")) {
-                        regex.append(".*");
-                    } else if (token.equals("_")) {
-                        regex.append(".");
+                    } else if (token.equals(ServiceConstants.DAS_CONSTANTS.PERCENT_SIGN)) {
+                        regex.append(ServiceConstants.DAS_CONSTANTS.REGEX_ALL);
+                    } else if (token.equals(ServiceConstants.DAS_CONSTANTS.UNDERSCORE)) {
+                        regex.append(ServiceConstants.DAS_CONSTANTS.DOT);
                     } else {
                         regex.append(Pattern.quote(token));
                     }
@@ -146,9 +163,9 @@ public class ServiceUtil {
                 }
             }
             Pattern pattern = Pattern.compile(regex.toString());
-            retval = pattern.matcher(input).matches();
+            retVal = pattern.matcher(input).matches();
         }
-        return retval;
+        return retVal;
     }
 
     /**
@@ -158,13 +175,10 @@ public class ServiceUtil {
      */
     public static byte[] parseBytes(String str) {
         try {
-            byte[] b;
-            if (str == null) {
-                b = null;
-            } else {
-                b = str.getBytes();
+            if (str != null) {
+                return str.getBytes();
             }
-            return b;
+            return null;
         } catch (RuntimeException e) {
             return null;
         }
@@ -173,14 +187,13 @@ public class ServiceUtil {
     /**
      * Get Ascii Stream of a given string.
      *
-     * @param str Input string wich needs to convert to Ascii Stream
+     * @param str Input string which needs to convert to Ascii Stream
      */
     public static InputStream getAsciiStream(String str) {
-        if (str == null) {
-            return null;
-        } else {
+        if (str != null) {
             return new ByteArrayInputStream(str.getBytes());
         }
+        return null;
     }
 
     /**
@@ -188,12 +201,14 @@ public class ServiceUtil {
      *
      * @param tableName - Name of the table before removing inverted comma characters
      */
-    public static String extractTableName(String tableName){
-        if(tableName != null) {
-            if (tableName.startsWith("'") || tableName.startsWith("\"")) {
+    public static String extractTableName(String tableName) {
+        if (tableName != null) {
+            if (tableName.startsWith(ServiceConstants.DAS_CONSTANTS.SINGLE_QUOTE) || tableName
+                    .startsWith(ServiceConstants.DAS_CONSTANTS.DOUBLE_QUOTE)) {
                 tableName = tableName.substring(1);
             }
-            if (tableName.endsWith("'") || tableName.endsWith("\"")) {
+            if (tableName.endsWith(ServiceConstants.DAS_CONSTANTS.SINGLE_QUOTE) || tableName
+                    .endsWith(ServiceConstants.DAS_CONSTANTS.DOUBLE_QUOTE)) {
                 tableName = tableName.substring(0, tableName.length() - 1);
             }
         }
