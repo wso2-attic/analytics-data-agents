@@ -43,6 +43,7 @@ public class DASJDriver implements Driver {
         } catch (SQLException e) {
             throw new RuntimeException("Driver Initialization Failed" + e.getMessage());
         }
+        System.out.println("Driver static block");
     }
 
     @Override
@@ -52,6 +53,7 @@ public class DASJDriver implements Driver {
         }
         String connectionURL = url.substring(ServiceConstants.DAS_DRIVER_SETTINGS.URL_PREFIX.length());
         return new DASJConnection(connectionURL, info);
+
     }
 
     /**
@@ -85,7 +87,9 @@ public class DASJDriver implements Driver {
         DriverPropertyInfo[] propertyInfo = new DriverPropertyInfo[2];
         propertyInfo[0] = userProp;
         propertyInfo[1] = passwordProp;
+        System.out.println("property info");
         return propertyInfo;
+
     }
 
     @Override
