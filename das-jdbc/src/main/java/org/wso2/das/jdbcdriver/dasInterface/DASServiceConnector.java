@@ -39,13 +39,12 @@ public class DASServiceConnector {
 
     public static String sendGet(String url, String user, String pass) throws Exception {
 
-        System.out.println("sendGet method >>>>>>>>>>>>>");
         URL obj = new URL(url);
-        System.out.println("URL:"+url);
-
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
 
-        // igonre SSL certificate
+        /**
+         *ignoring SSL certificates
+         */
         TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
             public java.security.cert.X509Certificate[] getAcceptedIssuers() {
                 return null;
@@ -54,7 +53,6 @@ public class DASServiceConnector {
             public void checkClientTrusted(
                     java.security.cert.X509Certificate[] certs, String authType) {
             }
-
             public void checkServerTrusted(
                     java.security.cert.X509Certificate[] certs, String authType) {
             }
@@ -76,7 +74,7 @@ public class DASServiceConnector {
             HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
 
         } catch (Exception e) {
-            //System.out.println(e);
+            e.printStackTrace();
         }
 
         // optional default is GET
@@ -97,22 +95,4 @@ public class DASServiceConnector {
         return (response.toString());
     }
 
-   /* SSLContextBuilder builder = new SSLContextBuilder();
-    builder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
-    SSLConnectionSocketFactory sslsf = new SSLConnectionSocketFactory(
-            builder.build());
-    CloseableHttpClient httpclient = HttpClients.custom().setSSLSocketFactory(
-            sslsf).build();
-
-    HttpGet httpGet = new HttpGet("https://some-server");
-    CloseableHttpResponse response = httpclient.execute(httpGet);
-    try {
-        System.out.println(response.getStatusLine());
-        HttpEntity entity = response.getEntity();
-        EntityUtils.consume(entity);
-    }
-    finally {
-        response.close();
-    }
-    */
 }

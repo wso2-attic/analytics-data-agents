@@ -43,7 +43,6 @@ public class DASJDriver implements Driver {
         } catch (SQLException e) {
             throw new RuntimeException("Driver Initialization Failed" + e.getMessage());
         }
-        System.out.println("Driver static block");
     }
 
     @Override

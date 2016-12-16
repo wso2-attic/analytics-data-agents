@@ -82,7 +82,6 @@ public class DASJConnection implements Connection {
         }
         this.connURL = url;
         this.connURLForDASTables = this.connURL + ServiceConstants.DAS_SERVICE_QUERIES.DAS_TABLE_NAMES_QUERY;
-        System.out.println("con method");
         if (info != null) {
             setProperties(info);
         }
@@ -98,7 +97,6 @@ public class DASJConnection implements Connection {
         if (this.connectionClosed) {
             throw new SQLException("[Closed Statement]: Driver.getParentLogger()");
         }
-        System.out.println("checkstatus method");
     }
 
     /**
@@ -113,7 +111,6 @@ public class DASJConnection implements Connection {
         checkStatus();
         DASJStatement statement = new DASJStatement(this, ResultSet.TYPE_FORWARD_ONLY);
         this.dasStatements.add(statement);
-        System.out.println("createStatement method");
         return statement;
     }
 
@@ -130,7 +127,6 @@ public class DASJConnection implements Connection {
         checkStatus();
         PreparedStatement preparedStatement = new DASJPreparedStatement(this, sql, ResultSet.TYPE_FORWARD_ONLY);
         this.dasStatements.add(preparedStatement);
-        System.out.println("preparedSt method");
         return preparedStatement;
     }
 
