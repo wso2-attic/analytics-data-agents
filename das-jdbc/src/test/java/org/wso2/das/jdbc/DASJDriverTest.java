@@ -65,7 +65,7 @@ public class DASJDriverTest {
     private boolean checkTableName() {
         boolean bRet = false;
         try {
-            String sTableName = "OVERUSED_DEVICES";     //uni_sys
+            String sTableName = "OVERUSED_DEVICES";
             Connection conn = DriverManager.getConnection("jdbc:dasjdriver:" + url, "admin", "admin");
             DatabaseMetaData dbmd = conn.getMetaData();
             String[] types = { "TABLE" };

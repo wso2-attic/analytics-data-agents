@@ -86,7 +86,6 @@ public class DASJDriver implements Driver {
         DriverPropertyInfo[] propertyInfo = new DriverPropertyInfo[2];
         propertyInfo[0] = userProp;
         propertyInfo[1] = passwordProp;
-        System.out.println("property info");
         return propertyInfo;
 
     }
