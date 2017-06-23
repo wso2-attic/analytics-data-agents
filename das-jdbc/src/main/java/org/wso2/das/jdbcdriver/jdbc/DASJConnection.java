@@ -82,7 +82,6 @@ public class DASJConnection implements Connection {
         }
         this.connURL = url;
         this.connURLForDASTables = this.connURL + ServiceConstants.DAS_SERVICE_QUERIES.DAS_TABLE_NAMES_QUERY;
-
         if (info != null) {
             setProperties(info);
         }
@@ -524,7 +523,6 @@ public class DASJConnection implements Connection {
      * @param tableName Table in which index details are required
      */
     public List<String> getIndexes(String tableName) {
-
         List<String> result = new LinkedList<String>();
         tableName = ServiceUtil.extractTableName(tableName);
         String sRequestURL = getConnURLForTableSchema(tableName);

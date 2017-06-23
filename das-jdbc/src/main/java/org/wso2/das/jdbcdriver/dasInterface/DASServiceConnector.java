@@ -17,6 +17,12 @@
  */
 package org.wso2.das.jdbcdriver.dasInterface;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -26,7 +32,6 @@ import java.net.URL;
  * Class which creates the Http Url Connection with the DAS instance.
  */
 public class DASServiceConnector {
-
     /**
      * Sends HTTP GET request to DAS Backend rest API.
      *
@@ -38,13 +43,44 @@ public class DASServiceConnector {
     public static String sendGet(String url, String user, String pass) throws Exception {
         URL obj = new URL(url);
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+        /**
+         *ignoring SSL certificates
+         */
+        TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager() {
+            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                return null;
+            }
+
+            public void checkClientTrusted(
+                    java.security.cert.X509Certificate[] certs, String authType) {
+            }
+
+            public void checkServerTrusted(
+                    java.security.cert.X509Certificate[] certs, String authType) {
+            }
+        }};
+        HostnameVerifier allHostsValid = new HostnameVerifier() {
+            @Override
+            public boolean verify(String arg0, SSLSession arg1) {
+                return true;
+            }
+        };
+
+        // Install the all-trusting trust manager
+        SSLContext sc = SSLContext.getInstance("SSL");
+        sc.init(null, trustAllCerts, new java.security.SecureRandom());
+        HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+        HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+
         // optional default is GET
         con.setRequestMethod("GET");
+
         //add authorization header
         String userPassword = user + ":" + pass;
         String encoding = new sun.misc.BASE64Encoder().encode(userPassword.getBytes());
         con.setRequestProperty("Authorization", "Basic " + encoding);
         StringBuilder response = new StringBuilder();
+
         try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
             String inputLine;
             while ((inputLine = in.readLine()) != null) {
@@ -53,4 +89,5 @@ public class DASServiceConnector {
         }
         return (response.toString());
     }
+
 }

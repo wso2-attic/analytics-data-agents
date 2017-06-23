@@ -86,6 +86,7 @@ public class DASJDriver implements Driver {
         propertyInfo[0] = userProp;
         propertyInfo[1] = passwordProp;
         return propertyInfo;
+
     }
 
     @Override
