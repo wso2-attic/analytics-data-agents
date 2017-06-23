@@ -52,7 +52,6 @@ public class DASJDriver implements Driver {
         }
         String connectionURL = url.substring(ServiceConstants.DAS_DRIVER_SETTINGS.URL_PREFIX.length());
         return new DASJConnection(connectionURL, info);
-
     }
 
     /**
